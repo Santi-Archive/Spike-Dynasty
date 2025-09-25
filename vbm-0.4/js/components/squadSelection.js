@@ -325,7 +325,14 @@ const SquadSelection = {
             }</div>
         `;
 
-    // Player cards are now static (no drag and drop)
+    // Add click event listener to show action buttons (only if not already added)
+    if (!playerCard.hasAttribute("data-click-listener-added")) {
+      playerCard.addEventListener("click", () => {
+        this.showPlayerActionButtons(playerCard, player);
+      });
+      playerCard.setAttribute("data-click-listener-added", "true");
+    }
+
     return playerCard;
   },
 
@@ -339,6 +346,190 @@ const SquadSelection = {
       .join("")
       .toUpperCase()
       .substring(0, 2);
+  },
+
+  /**
+   * Show action buttons for player card
+   *
+   * @param {HTMLElement} playerCard - The player card element
+   * @param {Object} player - Player object
+   * @returns {void}
+   */
+  showPlayerActionButtons(playerCard, player) {
+    // Check if buttons are already shown
+    if (playerCard.querySelector(".player-action-buttons")) {
+      return;
+    }
+
+    // Store original content if not already stored
+    if (!playerCard.dataset.originalContent) {
+      playerCard.dataset.originalContent = playerCard.innerHTML;
+    }
+
+    // Create action buttons using document fragments for better performance
+    const fragment = document.createDocumentFragment();
+    const buttonContainer = document.createElement("div");
+    buttonContainer.className = "player-action-buttons";
+
+    const starterBtn = document.createElement("button");
+    starterBtn.className = "player-action-btn player-action-btn--starter";
+    starterBtn.textContent = "STARTER";
+    starterBtn.dataset.action = "starter";
+    starterBtn.dataset.playerId = player.id;
+
+    const benchBtn = document.createElement("button");
+    benchBtn.className = "player-action-btn player-action-btn--bench";
+    benchBtn.textContent = "BENCH";
+    benchBtn.dataset.action = "bench";
+    benchBtn.dataset.playerId = player.id;
+
+    buttonContainer.appendChild(starterBtn);
+    buttonContainer.appendChild(benchBtn);
+    fragment.appendChild(buttonContainer);
+
+    // Use event delegation for better performance
+    const handleButtonClick = (e) => {
+      e.stopPropagation();
+      const target = e.target;
+      if (target.classList.contains("player-action-btn--starter")) {
+        this.addPlayerToStarter(player);
+      } else if (target.classList.contains("player-action-btn--bench")) {
+        this.addPlayerToBench(player);
+      }
+    };
+
+    const handleCardClick = (e) => {
+      // Only restore if clicking on the card container itself, not on buttons
+      if (
+        e.target === playerCard ||
+        e.target.classList.contains("player-action-buttons")
+      ) {
+        this.restorePlayerCard(playerCard, player);
+      }
+    };
+
+    // Store event handlers for cleanup
+    playerCard._buttonClickHandler = handleButtonClick;
+    playerCard._cardClickHandler = handleCardClick;
+
+    // Add event listeners
+    buttonContainer.addEventListener("click", handleButtonClick);
+    playerCard.addEventListener("click", handleCardClick);
+
+    // Replace content efficiently
+    playerCard.innerHTML = "";
+    playerCard.appendChild(fragment);
+  },
+
+  restorePlayerCard(playerCard, player) {
+    // Restore original content
+    playerCard.innerHTML = playerCard.dataset.originalContent;
+
+    // Clean up event listeners
+    if (playerCard._buttonClickHandler) {
+      playerCard.removeEventListener("click", playerCard._buttonClickHandler);
+      delete playerCard._buttonClickHandler;
+    }
+    if (playerCard._cardClickHandler) {
+      playerCard.removeEventListener("click", playerCard._cardClickHandler);
+      delete playerCard._cardClickHandler;
+    }
+
+    // Re-add the original click listener (only if not already added)
+    if (!playerCard.hasAttribute("data-click-listener-added")) {
+      playerCard.addEventListener("click", () => {
+        this.showPlayerActionButtons(playerCard, player);
+      });
+      playerCard.setAttribute("data-click-listener-added", "true");
+    }
+  },
+
+  /**
+   * Add player to starting 7
+   *
+   * @param {Object} player - Player object
+   * @returns {void}
+   */
+  addPlayerToStarter(player) {
+    // Find the first available starting position that matches the player's position
+    let targetSlot = null;
+    let targetIndex = -1;
+
+    for (let i = 0; i < this.squadPositions.length; i++) {
+      const slot = document.getElementById(`starting-${i}`);
+      const isOccupied = slot?.classList.contains(
+        "position-slot-modern--occupied"
+      );
+
+      // Check if this position matches the player's position and is not occupied
+      if (!isOccupied && this.squadPositions[i] === player.position) {
+        targetSlot = slot;
+        targetIndex = i;
+        break;
+      }
+    }
+
+    // If no matching position found, find any empty slot
+    if (!targetSlot) {
+      for (let i = 0; i < this.squadPositions.length; i++) {
+        const slot = document.getElementById(`starting-${i}`);
+        const isOccupied = slot?.classList.contains(
+          "position-slot-modern--occupied"
+        );
+
+        if (!isOccupied) {
+          targetSlot = slot;
+          targetIndex = i;
+          break;
+        }
+      }
+    }
+
+    if (targetSlot) {
+      this.placePlayerInStartingPosition(
+        targetSlot,
+        player,
+        player.id,
+        this.squadPositions[targetIndex]
+      );
+      this.updateAvailablePlayerVisibility(player.id, false);
+      this.saveSquadSelections();
+    } else {
+      alert("No available starting positions!");
+    }
+  },
+
+  /**
+   * Add player to bench
+   *
+   * @param {Object} player - Player object
+   * @returns {void}
+   */
+  addPlayerToBench(player) {
+    // Find the first available bench slot
+    let targetSlot = null;
+    let targetIndex = -1;
+
+    for (let i = 0; i < 9; i++) {
+      const slot = document.getElementById(`bench-${i}`);
+      const isOccupied = slot?.classList.contains(
+        "bench-slot-modern--occupied"
+      );
+
+      if (!isOccupied) {
+        targetSlot = slot;
+        targetIndex = i;
+        break;
+      }
+    }
+
+    if (targetSlot) {
+      this.placePlayerOnBench(targetSlot, player, player.id, player.position);
+      this.updateAvailablePlayerVisibility(player.id, false);
+      this.saveSquadSelections();
+    } else {
+      alert("No available bench slots!");
+    }
   },
 
   /**

@@ -241,8 +241,15 @@ const SquadSelection = {
       availablePlayers.innerHTML =
         '<div class="loading-placeholder">Loading players...</div>';
 
-      // Get available players from database (only those with position_status = 'available')
-      const players = await window.DatabaseService.getAvailablePlayers();
+      // Get players from the user's team
+      const userTeam = window.AuthService.getUserTeam();
+      if (!userTeam) {
+        throw new Error("No user team found");
+      }
+
+      const players = await window.DatabaseService.getPlayersByTeam(
+        userTeam.id
+      );
 
       console.log(
         "DEBUG SquadSelection: Available players from database:",
@@ -335,10 +342,135 @@ const SquadSelection = {
   },
 
   /**
+   * Place a player in a starting position slot
+   *
+   * @param {HTMLElement} slot - Position slot element
+   * @param {Object} player - Player object
+   * @param {number} playerId - Player ID
+   * @param {string} position - Player position
+   * @returns {void}
+   */
+  placePlayerInStartingPosition(slot, player, playerId, position) {
+    const playerSlot = slot.querySelector(".position-slot-player-modern");
+    if (!playerSlot) return;
+
+    const initials = this.getPlayerInitials(
+      player.player_name || "Unknown Player"
+    );
+
+    playerSlot.innerHTML = `
+      <div class="placed-player">
+        <div class="position-slot-player-avatar-modern">${initials}</div>
+        <div class="position-slot-player-info-modern">
+          <div class="position-slot-player-name-modern">${
+            player.player_name || "Unknown Player"
+          }</div>
+          <div class="position-slot-player-position-modern" data-position="${
+            position || "Unknown"
+          }">${position || "Unknown"}</div>
+        </div>
+        <div class="position-slot-player-overall-modern">${
+          player.overall || "N/A"
+        }</div>
+      </div>
+    `;
+
+    playerSlot.dataset.playerId = playerId;
+    slot.classList.add("position-slot-modern--occupied");
+  },
+
+  /**
+   * Place a player on a bench slot
+   *
+   * @param {HTMLElement} slot - Bench slot element
+   * @param {Object} player - Player object
+   * @param {number} playerId - Player ID
+   * @param {string} position - Player position
+   * @returns {void}
+   */
+  placePlayerOnBench(slot, player, playerId, position) {
+    const playerSlot = slot.querySelector(".bench-slot-player-modern");
+    if (!playerSlot) return;
+
+    const initials = this.getPlayerInitials(
+      player.player_name || "Unknown Player"
+    );
+
+    playerSlot.innerHTML = `
+      <div class="placed-player">
+        <div class="bench-slot-player-avatar-modern">${initials}</div>
+        <div class="bench-slot-player-info-modern">
+          <div class="bench-slot-player-name-modern">${
+            player.player_name || "Unknown Player"
+          }</div>
+          <div class="bench-slot-player-position-modern" data-position="${
+            position || "Unknown"
+          }">${position || "Unknown"}</div>
+        </div>
+        <div class="bench-slot-player-overall-modern">${
+          player.overall || "N/A"
+        }</div>
+      </div>
+    `;
+
+    playerSlot.dataset.playerId = playerId;
+    slot.classList.add("bench-slot-modern--occupied");
+  },
+
+  /**
+   * Update visibility of a player in the available players list
+   *
+   * @param {number} playerId - Player ID
+   * @param {boolean} isVisible - Whether the player should be visible
+   * @returns {void}
+   */
+  updateAvailablePlayerVisibility(playerId, isVisible) {
+    const playerCard = document.querySelector(`[data-player-id="${playerId}"]`);
+    if (playerCard) {
+      playerCard.style.display = isVisible ? "block" : "none";
+    }
+  },
+
+  /**
+   * Update visibility of all available players based on current squad
+   *
+   * @returns {void}
+   */
+  updateAllAvailablePlayerVisibility() {
+    // Get all players currently in starting positions
+    const startingPlayers = [];
+    for (let i = 0; i < this.squadPositions.length; i++) {
+      const slot = document.getElementById(`starting-${i}`);
+      const playerElement = slot?.querySelector(".placed-player");
+      if (playerElement) {
+        startingPlayers.push(parseInt(playerElement.dataset.playerId));
+      }
+    }
+
+    // Get all players currently on bench
+    const benchPlayers = [];
+    for (let i = 0; i < 9; i++) {
+      const slot = document.getElementById(`bench-${i}`);
+      const playerElement = slot?.querySelector(".placed-player");
+      if (playerElement) {
+        benchPlayers.push(parseInt(playerElement.dataset.playerId));
+      }
+    }
+
+    // Hide players that are already in the squad
+    const allSquadPlayers = [...startingPlayers, ...benchPlayers];
+    this.allPlayers.forEach((player) => {
+      const isInSquad = allSquadPlayers.includes(player.id);
+      this.updateAvailablePlayerVisibility(player.id, !isInSquad);
+    });
+  },
+
+  /**
    * Save current squad selections to database
    *
-   * This function saves the current squad configuration to the database
-   * by updating each player's position_status and indices.
+   * This function saves the current squad configuration to the database.
+   * Since position_status columns have been removed, this now just logs
+   * the current squad configuration for debugging purposes.
    *
    * @returns {Promise<void>}
    */
@@ -346,81 +478,58 @@ const SquadSelection = {
     try {
       const squad = await this.getCurrentSquad();
 
-      // Reset all players to available status first
-      await window.DatabaseService.resetAllPlayerPositions();
+      // Log the current squad configuration
+      console.log("Current squad configuration:", squad);
 
-      // Update starting players to starter status with position indices
-      for (let i = 0; i < squad.starting.length; i++) {
-        const pos = squad.starting[i];
-        if (pos.playerId) {
-          await window.DatabaseService.updatePlayerPositionStatus(
-            parseInt(pos.playerId),
-            "starter",
-            i
-          );
-        }
-      }
+      // TODO: Implement squad saving logic when database structure is finalized
+      // For now, we'll just store the configuration in local storage as a backup
+      localStorage.setItem("squadSelection", JSON.stringify(squad));
 
-      // Update bench players to bench status with bench indices
-      for (let i = 0; i < squad.bench.length; i++) {
-        const bench = squad.bench[i];
-        if (bench.playerId) {
-          await window.DatabaseService.updatePlayerPositionStatus(
-            parseInt(bench.playerId),
-            "bench",
-            null,
-            i
-          );
-        }
-      }
-
-      console.log("Squad selections saved successfully to database");
+      console.log("Squad selections saved successfully");
     } catch (error) {
       console.error("Error saving squad selections:", error);
     }
   },
 
   /**
-   * Load saved squad selections from database
+   * Load saved squad selections from local storage
    *
-   * This function loads previously saved squad selections and restores
-   * the players to their correct positions based on their position_status.
+   * This function loads previously saved squad selections from local storage
+   * since position_status columns have been removed from the database.
    *
    * @returns {Promise<void>}
    */
   async loadSavedSquadSelections() {
     try {
-      console.log("Loading squad selections from database...");
+      console.log("Loading squad selections from local storage...");
 
-      // Load starting players from database
-      const startingPlayers = await window.DatabaseService.getStartingLineup();
-      console.log("Starting players from database:", startingPlayers);
+      // Try to load from local storage
+      const savedSquad = localStorage.getItem("squadSelection");
+      if (!savedSquad) {
+        console.log("No saved squad selections found");
+        return;
+      }
 
-      // Load bench players from database
-      const benchPlayers = await window.DatabaseService.getBenchPlayers();
-      console.log("Bench players from database:", benchPlayers);
+      const squad = JSON.parse(savedSquad);
+      console.log("Loaded squad from local storage:", squad);
 
       // Restore starting players to their positions
-      for (const player of startingPlayers) {
-        if (player.position_index !== null) {
-          await this.restorePlayerToStartingPositionByIndex(
-            player.position_index,
-            player.id
-          );
+      for (let i = 0; i < squad.starting.length; i++) {
+        const pos = squad.starting[i];
+        if (pos.playerId) {
+          await this.restorePlayerToStartingPositionByIndex(i, pos.playerId);
         }
       }
 
       // Restore bench players to their slots
-      for (const player of benchPlayers) {
-        if (player.bench_index !== null) {
-          await this.restorePlayerToBenchByIndex(player.bench_index, player.id);
+      for (let i = 0; i < squad.bench.length; i++) {
+        const bench = squad.bench[i];
+        if (bench.playerId) {
+          await this.restorePlayerToBenchByIndex(i, bench.playerId);
         }
       }
 
-      // Update visibility of all available players to prevent duplicates
-      this.updateAllAvailablePlayerVisibility();
-
-      console.log("Squad selections loaded successfully from database");
+      console.log("Squad selections loaded successfully from local storage");
     } catch (error) {
       console.error("Error loading saved squad selections:", error);
     }
@@ -457,7 +566,7 @@ const SquadSelection = {
       );
 
       // Hide player from available list
-      this.updateAvailablePlayerVisibility(playerId, "available");
+      this.updateAvailablePlayerVisibility(playerId, false);
     } catch (error) {
       console.error("Error restoring player to starting position:", error);
     }
@@ -514,7 +623,7 @@ const SquadSelection = {
       this.placePlayerOnBench(slot, player, playerId, player.position);
 
       // Hide player from available list
-      this.updateAvailablePlayerVisibility(playerId, "available");
+      this.updateAvailablePlayerVisibility(playerId, false);
     } catch (error) {
       console.error("Error restoring player to bench:", error);
     }
@@ -616,14 +725,14 @@ const SquadSelection = {
   /**
    * Clear all squad selections
    *
-   * This function removes all players from the squad and returns them to the available list.
+   * This function removes all players from the squad and clears local storage.
    *
    * @returns {Promise<void>}
    */
   async clearSquad() {
     try {
-      // Reset all players to available status in database
-      await window.DatabaseService.resetAllPlayerPositions();
+      // Clear local storage
+      localStorage.removeItem("squadSelection");
 
       // Clear all starting positions
       for (let i = 0; i < this.squadPositions.length; i++) {

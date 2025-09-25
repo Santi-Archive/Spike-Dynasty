@@ -987,6 +987,20 @@ const DatabaseService = {
             ).toFixed(1)
           : 0;
 
+      // Calculate win rate with proper fallback
+      let winRate = 0;
+      if (
+        standingsData?.win_percentage !== undefined &&
+        standingsData?.win_percentage !== null
+      ) {
+        winRate = parseFloat(standingsData.win_percentage);
+      } else if (standingsData?.matches_played > 0) {
+        // Fallback calculation if win_percentage is not available
+        winRate = Math.round(
+          (standingsData.wins / standingsData.matches_played) * 100
+        );
+      }
+
       const result = {
         teamId: teamData.id,
         teamName: teamData.team_name,
@@ -994,7 +1008,7 @@ const DatabaseService = {
         losses: standingsData?.losses || 0,
         matchesPlayed: standingsData?.matches_played || 0,
         squadSize: playersData?.length || 0,
-        winRate: standingsData?.win_percentage || 0,
+        winRate: winRate,
         averageRating: parseFloat(averageRating),
         budget: teamData.team_money || 0,
         points: standingsData?.points || 0,

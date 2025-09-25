@@ -120,6 +120,12 @@ const Dashboard = {
       const stats = await window.DatabaseService.getUserTeamStatistics();
 
       console.log("Dashboard received team statistics:", stats);
+      console.log(
+        "Win rate value:",
+        stats.winRate,
+        "Type:",
+        typeof stats.winRate
+      );
 
       // Update the dashboard with real data
       this.updateTeamStatisticsDisplay(stats);
@@ -174,7 +180,23 @@ const Dashboard = {
       // Update win rate
       const winRateElement = document.getElementById("teamWinRate");
       if (winRateElement) {
-        winRateElement.textContent = `${stats.winRate || 0}%`;
+        let winRate = stats.winRate || 0;
+
+        // If win rate is 0 but we have wins and matches, calculate it
+        if (winRate === 0 && stats.wins > 0 && stats.matchesPlayed > 0) {
+          winRate = Math.round((stats.wins / stats.matchesPlayed) * 100);
+          console.log(
+            `Calculated win rate: ${stats.wins}/${stats.matchesPlayed} = ${winRate}%`
+          );
+        }
+
+        // Ensure win rate is a valid number and format it properly
+        const formattedWinRate =
+          typeof winRate === "number" && !isNaN(winRate)
+            ? winRate.toFixed(1)
+            : "0.0";
+        winRateElement.textContent = `${formattedWinRate}%`;
+        console.log(`Set win rate to: ${formattedWinRate}%`);
       }
 
       // Update average rating

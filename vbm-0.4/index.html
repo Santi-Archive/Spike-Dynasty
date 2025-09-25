@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <!-- Basic meta tags for responsive design and character encoding -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Page title for browser tab -->
+    <title>Spike Dynasty</title>
+
+    <!-- Google Fonts for modern typography -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Main stylesheet -->
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- Loading screen overlay -->
+    <div class="loading-screen" id="loadingScreen">
+      <div class="loading-screen__content">
+        <div class="loading-screen__logo">
+          <div class="loading-screen__logo-icon">🏐</div>
+          <div class="loading-screen__logo-text">Spike Dynasty</div>
+        </div>
+        <div class="loading-screen__spinner">
+          <div class="loading-spinner">
+            <div class="loading-spinner__circle"></div>
+            <div class="loading-spinner__circle"></div>
+            <div class="loading-spinner__circle"></div>
+          </div>
+        </div>
+        <div class="loading-screen__message" id="loadingMessage">
+          Loading application...
+        </div>
+        <div class="loading-screen__progress">
+          <div class="loading-screen__progress-bar" id="loadingProgress"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main application container using BEM block -->
+    <div class="app">
+      <!-- Mobile menu toggle button for responsive navigation -->
+      <button class="app__mobile-toggle" onclick="toggleMobileMenu()">☰</button>
+
+      <!-- Sidebar navigation using BEM block -->
+      <nav class="sidebar" id="sidebar">
+        <!-- Sidebar header section -->
+        <div class="sidebar__header">
+          <h1 class="sidebar__title">Spike Dynasty</h1>
+
+          <!-- User info section -->
+          <div
+            class="sidebar__user-info"
+            data-auth-required
+            style="display: none"
+          >
+            <div class="user-info">
+              <div class="user-info__name" data-user-info="displayName"></div>
+              <div class="user-info__team" data-user-info="teamName"></div>
+            </div>
+            <button class="btn btn--small btn--secondary" id="logoutBtn">
+              Logout
+            </button>
+          </div>
+        </div>
+
+        <!-- Navigation menu items -->
+        <div class="sidebar__nav">
+          <a
+            href="#"
+            class="sidebar__nav-item sidebar__nav-item--active"
+            onclick="showPage('dashboard')"
+            data-auth-required
+            >Dashboard</a
+          >
+          <a
+            href="#"
+            class="sidebar__nav-item"
+            onclick="showPage('team-management')"
+            data-auth-required
+            >Team Management</a
+          >
+          <a
+            href="#"
+            class="sidebar__nav-item"
+            onclick="showPage('squad-selection')"
+            data-auth-required
+            >Squad Selection</a
+          >
+          <a
+            href="#"
+            class="sidebar__nav-item"
+            onclick="showPage('standings')"
+            data-auth-required
+            >Standings</a
+          >
+          <a
+            href="#"
+            class="sidebar__nav-item"
+            onclick="showPage('transfer-market')"
+            data-auth-required
+            >Transfer Market</a
+          >
+          <a
+            href="#"
+            class="sidebar__nav-item"
+            onclick="showPage('match-simulation')"
+            data-auth-required
+            >Match Simulation</a
+          >
+        </div>
+      </nav>
+
+      <!-- Main content area -->
+      <main class="main" id="mainContent">
+        <!-- Dashboard page -->
+        <div id="dashboard" class="page page--active">
+          <!-- Hero section with dynamic background -->
+          <div class="dashboard-hero">
+            <div class="dashboard-hero__background"></div>
+            <div class="dashboard-hero__content">
+              <div class="dashboard-hero__text">
+                <h1 class="dashboard-hero__title">Dashboard</h1>
+                <p class="dashboard-hero__subtitle">
+                  Manage your volleyball team and progress through the season
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dashboard content sections -->
+          <div class="dashboard-content">
+            <!-- Enhanced match simulation section -->
+            <div class="match-preview-enhanced" id="matchSimulation">
+              <div class="match-preview-enhanced__glow"></div>
+              <div class="match-preview-enhanced__content">
+                <div class="match-preview-enhanced__badge">
+                  <span class="match-preview-enhanced__badge-text"
+                    >Live Match</span
+                  >
+                  <div class="match-preview-enhanced__pulse"></div>
+                </div>
+                <h3 class="match-preview-enhanced__title">Today's Match</h3>
+                <p class="match-preview-enhanced__description">
+                  You have a match scheduled for today. Prepare your team and
+                  simulate the match!
+                </p>
+                <button
+                  class="btn-enhanced btn-enhanced--primary"
+                  onclick="showPage('match-simulation')"
+                >
+                  <span class="btn-enhanced__icon">⚡</span>
+                  <span class="btn-enhanced__text">Go to Match Simulation</span>
+                  <div class="btn-enhanced__glow"></div>
+                </button>
+              </div>
+            </div>
+
+            <!-- Team stats section -->
+            <div class="team-stats-section">
+              <div class="team-stats-section__container">
+                <h2 class="team-stats-section__title">Team Statistics</h2>
+                <div class="team-stats-section__grid">
+                  <div class="stat-card">
+                    <div class="stat-card__icon">🏆</div>
+                    <div class="stat-card__value">12</div>
+                    <div class="stat-card__label">Wins</div>
+                  </div>
+                  <div class="stat-card">
+                    <div class="stat-card__icon">❌</div>
+                    <div class="stat-card__value">3</div>
+                    <div class="stat-card__label">Losses</div>
+                  </div>
+                  <div class="stat-card">
+                    <div class="stat-card__icon">👥</div>
+                    <div class="stat-card__value">15</div>
+                    <div class="stat-card__label">Squad Size</div>
+                  </div>
+                  <div class="stat-card">
+                    <div class="stat-card__icon">📊</div>
+                    <div class="stat-card__value">80%</div>
+                    <div class="stat-card__label">Win Rate</div>
+                  </div>
+                  <div class="stat-card">
+                    <div class="stat-card__icon">⚡</div>
+                    <div class="stat-card__value">4.2</div>
+                    <div class="stat-card__label">Avg Rating</div>
+                  </div>
+                  <div class="stat-card">
+                    <div class="stat-card__icon">💰</div>
+                    <div class="stat-card__value">$2.1M</div>
+                    <div class="stat-card__label">Budget</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Enhanced season progress section -->
+          <div class="season-progress-enhanced">
+            <!-- Enhanced calendar container -->
+            <div class="calendar-container-enhanced">
+              <!-- Enhanced calendar header -->
+              <div class="calendar-header-enhanced">
+                <div class="calendar-header-enhanced__content">
+                  <h2 class="calendar-header-enhanced__title">
+                    Season Progress
+                  </h2>
+                  <p class="calendar-header-enhanced__subtitle">
+                    Track your team's journey through January 2024
+                  </p>
+                </div>
+                <div class="calendar-header-enhanced__actions">
+                  <button
+                    class="btn-enhanced btn-enhanced--primary"
+                    onclick="progressDay()"
+                  >
+                    <span class="btn-enhanced__icon">+</span>
+                    <span class="btn-enhanced__text">Progress Day</span>
+                    <div class="btn-enhanced__glow"></div>
+                  </button>
+                  <button
+                    class="btn-enhanced btn-enhanced--secondary"
+                    onclick="viewCalendar()"
+                  >
+                    <span class="btn-enhanced__icon">📅</span>
+                    <span class="btn-enhanced__text">View Calendar</span>
+                    <div class="btn-enhanced__glow"></div>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Enhanced current day indicator -->
+              <div id="currentDayIndicator" class="day-indicator-enhanced">
+                <div class="day-indicator-enhanced__glow"></div>
+                <span class="day-indicator-enhanced__text"
+                  >January 15, 2024</span
+                >
+              </div>
+
+              <!-- Enhanced calendar grid -->
+              <div class="calendar-enhanced" id="calendar">
+                Calendar days will be generated by JavaScript
+              </div>
+
+              <!-- Enhanced calendar legend -->
+              <div class="calendar-legend-enhanced">
+                <div class="calendar-legend-enhanced__item">
+                  <div
+                    class="calendar-legend-enhanced__dot calendar-legend-enhanced__dot--match"
+                  ></div>
+                  <span class="calendar-legend-enhanced__label"
+                    >Match Days</span
+                  >
+                </div>
+                <div class="calendar-legend-enhanced__item">
+                  <div
+                    class="calendar-legend-enhanced__dot calendar-legend-enhanced__dot--training"
+                  ></div>
+                  <span class="calendar-legend-enhanced__label"
+                    >Training Days</span
+                  >
+                </div>
+                <div class="calendar-legend-enhanced__item">
+                  <div
+                    class="calendar-legend-enhanced__dot calendar-legend-enhanced__dot--today"
+                  ></div>
+                  <span class="calendar-legend-enhanced__label">Today</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Team Management page -->
+        <div id="team-management" class="page">
+          <div class="page__header">
+            <h1 class="page__title">Team Management</h1>
+            <p class="page__subtitle">View and manage your players</p>
+          </div>
+
+          <!-- Grid container for player cards -->
+          <div class="player-grid" id="teamGrid">
+            Player cards will be generated by JavaScript
+          </div>
+        </div>
+
+        <!-- Squad Selection page -->
+        <div id="squad-selection" class="page">
+          <div class="page__header">
+            <h1 class="page__title">Squad Selection</h1>
+            <p class="page__subtitle">
+              Set your starting lineup and bench players
+            </p>
+          </div>
+
+          <div class="squad-layout">
+            <!-- Squad sections container -->
+            <div class="squad-layout__sections">
+              <!-- Starting lineup section -->
+              <div class="squad-section">
+                <h2 class="section-title">Starting 7</h2>
+                <div class="squad-section__positions" id="startingPositions">
+                  Starting positions will be generated by JavaScript
+                </div>
+              </div>
+
+              <!-- Bench players section -->
+              <div class="squad-section">
+                <h2 class="section-title">Bench Players</h2>
+                <div class="squad-section__bench" id="benchSlots">
+                  Bench slots will be generated by JavaScript
+                </div>
+              </div>
+            </div>
+
+            <!-- Available players section -->
+            <div class="available-players">
+              <h2 class="section-title">Available Players</h2>
+              <div class="available-players__grid" id="availablePlayers">
+                Available players will be generated by JavaScript
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Standings page -->
+        <div id="standings" class="page">
+          <div class="page__header">
+            <h1 class="page__title">Standings</h1>
+            <p class="page__subtitle">View league standings and rankings</p>
+          </div>
+
+          <div id="standingsContent">
+            Standings content will be generated by JavaScript
+          </div>
+        </div>
+
+        <!-- Transfer Market page -->
+        <div id="transfer-market" class="page">
+          <div class="page__header">
+            <h1 class="page__title">Transfer Market</h1>
+            <p class="page__subtitle">Buy and sell players</p>
+          </div>
+
+          <div id="transferContent">
+            Transfer market content will be generated by JavaScript
+          </div>
+        </div>
+
+        <!-- Match Simulation page -->
+        <div id="match-simulation" class="page">
+          <div class="page__header">
+            <h1 class="page__title">Match Simulation</h1>
+            <p class="page__subtitle">Simulate your next match</p>
+          </div>
+
+          <div class="match-container">
+            <!-- Match header with team information -->
+            <div class="match-container__header">
+              <div class="team">
+                <div class="team__logo">VM</div>
+                <div class="team__name">Your Team</div>
+              </div>
+              <div class="match-container__vs">VS</div>
+              <div class="team">
+                <div class="team__logo">OPP</div>
+                <div class="team__name">Opponents</div>
+              </div>
+            </div>
+
+            <!-- Match control buttons -->
+            <div class="match-container__controls">
+              <button class="btn btn--primary" onclick="simulateMatch()">
+                Start Simulation
+              </button>
+              <button class="btn btn--accent" onclick="quickSimulate()">
+                Quick Simulate
+              </button>
+            </div>
+
+            <!-- Match results display (initially hidden) -->
+            <div id="matchResults" class="match-results">
+              <h3 class="match-results__title">Match Result</h3>
+              <div id="finalScore" class="match-results__score"></div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Player details modal overlay -->
+    <div class="modal" id="playerModal">
+      <div class="modal__content">
+        Modal content will be generated by JavaScript
+      </div>
+    </div>
+
+    <!-- Team details modal overlay -->
+    <div class="modal" id="teamModal">
+      <div class="modal__content">
+        Modal content will be generated by JavaScript
+      </div>
+    </div>
+
+    <!-- Authentication modal overlay -->
+    <div class="modal" id="authModal">
+      <div class="modal__content modal__content--auth">
+        <!-- Login view -->
+        <div id="loginView" class="auth-view">
+          <h2 class="auth-view__title">Login</h2>
+          <form id="loginForm" class="auth-form">
+            <div class="form-group">
+              <label for="loginEmail" class="form-label">Email</label>
+              <input
+                type="email"
+                id="loginEmail"
+                name="email"
+                class="form-input"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="loginPassword" class="form-label">Password</label>
+              <input
+                type="password"
+                id="loginPassword"
+                name="password"
+                class="form-input"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              class="btn btn--primary btn--full"
+              data-original-text="Login"
+            >
+              Login
+            </button>
+          </form>
+          <p class="auth-view__switch">
+            Don't have an account?
+            <button type="button" id="showRegister" class="link-btn">
+              Register here
+            </button>
+          </p>
+        </div>
+
+        <!-- Register view -->
+        <div id="registerView" class="auth-view" style="display: none">
+          <h2 class="auth-view__title">Register</h2>
+          <form id="registerForm" class="auth-form">
+            <div class="form-group">
+              <label for="registerEmail" class="form-label">Email</label>
+              <input
+                type="email"
+                id="registerEmail"
+                name="email"
+                class="form-input"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="registerUsername" class="form-label">Username</label>
+              <input
+                type="text"
+                id="registerUsername"
+                name="username"
+                class="form-input"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="registerDisplayName" class="form-label"
+                >Display Name</label
+              >
+              <input
+                type="text"
+                id="registerDisplayName"
+                name="displayName"
+                class="form-input"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="registerPassword" class="form-label">Password</label>
+              <input
+                type="password"
+                id="registerPassword"
+                name="password"
+                class="form-input"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="confirmPassword" class="form-label"
+                >Confirm Password</label
+              >
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                class="form-input"
+                required
+              />
+            </div>
+            <button
+              type="submit"
+              class="btn btn--primary btn--full"
+              data-original-text="Register"
+            >
+              Register
+            </button>
+          </form>
+          <p class="auth-view__switch">
+            Already have an account?
+            <button type="button" id="showLogin" class="link-btn">
+              Login here
+            </button>
+          </p>
+        </div>
+
+        <!-- Team selection view -->
+        <div id="teamSelectionView" class="auth-view" style="display: none">
+          <h2 class="auth-view__title">Select Your Team</h2>
+          <p class="auth-view__description">
+            Choose a team to manage in the league.
+          </p>
+          <form id="teamSelectionForm" class="auth-form">
+            <div class="form-group">
+              <label for="teamSelect" class="form-label">Available Teams</label>
+              <select id="teamSelect" name="teamId" class="form-input" required>
+                <option value="">Loading teams...</option>
+              </select>
+            </div>
+            <button
+              type="submit"
+              class="btn btn--primary btn--full"
+              data-original-text="Select Team"
+            >
+              Select Team
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transfer offer modal overlay -->
+    <div class="modal" id="transferOfferModal">
+      <div class="modal__content">
+        <h2 class="modal__title">Make Transfer Offer</h2>
+        <form id="transferOfferForm" class="transfer-offer-form">
+          <div class="form-group">
+            <label for="offerAmount" class="form-label">Offer Amount ($)</label>
+            <input
+              type="number"
+              id="offerAmount"
+              name="offerAmount"
+              class="form-input"
+              min="1"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="offerMessage" class="form-label"
+              >Message (Optional)</label
+            >
+            <textarea
+              id="offerMessage"
+              name="message"
+              class="form-input"
+              rows="3"
+              placeholder="Add a message to your offer..."
+            ></textarea>
+          </div>
+          <div class="modal__actions">
+            <button
+              type="button"
+              class="btn btn--secondary"
+              onclick="closeTransferOfferModal()"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              class="btn btn--primary"
+              data-original-text="Make Offer"
+            >
+              Make Offer
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Load Supabase client library -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+    <!-- Load utility scripts first -->
+    <script src="js/utils/domHelpers.js"></script>
+    <script src="js/utils/dataStorage.js"></script>
+    <script src="js/utils/modalHelpers.js"></script>
+
+    <!-- Load configuration and services -->
+    <script src="js/config/supabase.js"></script>
+    <script src="js/services/databaseService.js"></script>
+    <script src="js/services/authService.js"></script>
+    <script src="js/services/transferOffersService.js"></script>
+    <script src="js/utils/dataMigration.js"></script>
+    <script src="js/utils/playerStatsSystem.js"></script>
+
+    <!-- Load component scripts -->
+    <script src="js/components/dashboard.js"></script>
+    <script src="js/components/teamManagement.js"></script>
+    <script src="js/components/squadSelection.js"></script>
+    <script src="js/components/standings.js"></script>
+    <script src="js/components/transferMarket.js"></script>
+    <script src="js/components/matchSimulation.js"></script>
+    <script src="js/components/userManagement.js"></script>
+
+    <!-- Load main application coordinator last -->
+    <script src="js/main.js"></script>
+  </body>
+</html>

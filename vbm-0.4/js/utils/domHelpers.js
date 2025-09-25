@@ -43,9 +43,15 @@ function showPage(pageId) {
   } else if (pageId === "team-management") {
     window.TeamManagement.initialize();
   } else if (pageId === "squad-selection") {
-    window.SquadSelection.initialize();
+    // Handle async initialization for squad selection
+    window.SquadSelection.initialize().catch((error) => {
+      console.error("Error initializing squad selection:", error);
+    });
   } else if (pageId === "standings") {
-    window.Standings.initialize();
+    // Handle async initialization for standings
+    window.Standings.initialize().catch((error) => {
+      console.error("Error initializing standings:", error);
+    });
   } else if (pageId === "transfer-market") {
     window.TransferMarket.initialize();
   }

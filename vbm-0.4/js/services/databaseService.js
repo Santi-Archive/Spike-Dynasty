@@ -18,6 +18,10 @@
 const DatabaseService = {
   // Service state
   isInitialized: false,
+
+  // Caching system for performance optimization
+  cache: new Map(),
+  cacheTimeout: 5 * 60 * 1000, // 5 minutes
   connectionStatus: "disconnected",
 
   /**
@@ -522,6 +526,229 @@ const DatabaseService = {
     }
   },
 
+  // ==================== POSITION STATUS OPERATIONS ====================
+
+  /**
+   * Get players by position status (available, starter, bench)
+   *
+   * @param {string} status - Position status to filter by
+   * @param {number} teamId - Optional team ID to filter by
+   * @returns {Promise<Array>} - Array of player objects with the specified status
+   */
+  async getPlayersByPositionStatus(status, teamId = null) {
+    try {
+      console.log(
+        `DEBUG DatabaseService: getPlayersByPositionStatus(${status}, ${teamId}) called`
+      );
+
+      // Validate status
+      if (!["available", "starter", "bench"].includes(status)) {
+        throw new Error(`Invalid position status: ${status}`);
+      }
+
+      // Use team ID if provided, otherwise get current user's team
+      let targetTeamId = teamId;
+      if (!targetTeamId && window.AuthService) {
+        const userTeam = window.AuthService.getUserTeam();
+        targetTeamId = userTeam?.id;
+      }
+
+      if (!targetTeamId) {
+        console.log("DEBUG DatabaseService: No team ID available");
+        return [];
+      }
+
+      const { data, error } = await this.getClient()
+        .from("players")
+        .select(
+          `
+          *,
+          teams(team_name, team_money)
+        `
+        )
+        .eq("team_id", targetTeamId)
+        .eq("position_status", status)
+        .order("overall", { ascending: false });
+
+      if (error) throw error;
+      console.log(
+        `DEBUG DatabaseService: Found ${
+          (data || []).length
+        } players with status ${status}`
+      );
+      return data || [];
+    } catch (error) {
+      console.error(
+        `Error fetching players by position status ${status}:`,
+        error
+      );
+      throw error;
+    }
+  },
+
+  /**
+   * Update player position status and indices
+   *
+   * @param {number} playerId - Player ID to update
+   * @param {string} status - New position status
+   * @param {number} positionIndex - Position index for starters (0-6)
+   * @param {number} benchIndex - Bench index for bench players (0-8)
+   * @returns {Promise<Object>} - Updated player object
+   */
+  async updatePlayerPositionStatus(
+    playerId,
+    status,
+    positionIndex = null,
+    benchIndex = null
+  ) {
+    try {
+      console.log(
+        `DEBUG DatabaseService: updatePlayerPositionStatus(${playerId}, ${status}, ${positionIndex}, ${benchIndex}) called`
+      );
+
+      // Validate status
+      if (!["available", "starter", "bench"].includes(status)) {
+        throw new Error(`Invalid position status: ${status}`);
+      }
+
+      // Prepare update data
+      const updateData = {
+        position_status: status,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Set appropriate index based on status
+      if (status === "starter" && positionIndex !== null) {
+        updateData.position_index = positionIndex;
+        updateData.bench_index = null;
+      } else if (status === "bench" && benchIndex !== null) {
+        updateData.bench_index = benchIndex;
+        updateData.position_index = null;
+      } else if (status === "available") {
+        updateData.position_index = null;
+        updateData.bench_index = null;
+      }
+
+      const { data, error } = await this.getClient()
+        .from("players")
+        .update(updateData)
+        .eq("id", playerId)
+        .select(
+          `
+          *,
+          teams(team_name, team_money)
+        `
+        )
+        .single();
+
+      if (error) throw error;
+      console.log(
+        `DEBUG DatabaseService: Player ${playerId} position status updated to ${status}`
+      );
+      return data;
+    } catch (error) {
+      console.error(
+        `Error updating player ${playerId} position status:`,
+        error
+      );
+      throw error;
+    }
+  },
+
+  /**
+   * Get starting lineup players ordered by position index
+   *
+   * @param {number} teamId - Optional team ID
+   * @returns {Promise<Array>} - Array of starting players ordered by position
+   */
+  async getStartingLineup(teamId = null) {
+    try {
+      const players = await this.getPlayersByPositionStatus("starter", teamId);
+      // Sort by position_index to maintain order
+      return players.sort(
+        (a, b) => (a.position_index || 0) - (b.position_index || 0)
+      );
+    } catch (error) {
+      console.error("Error getting starting lineup:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get bench players ordered by bench index
+   *
+   * @param {number} teamId - Optional team ID
+   * @returns {Promise<Array>} - Array of bench players ordered by bench position
+   */
+  async getBenchPlayers(teamId = null) {
+    try {
+      const players = await this.getPlayersByPositionStatus("bench", teamId);
+      // Sort by bench_index to maintain order
+      return players.sort(
+        (a, b) => (a.bench_index || 0) - (b.bench_index || 0)
+      );
+    } catch (error) {
+      console.error("Error getting bench players:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get available players
+   *
+   * @param {number} teamId - Optional team ID
+   * @returns {Promise<Array>} - Array of available players
+   */
+  async getAvailablePlayers(teamId = null) {
+    try {
+      return await this.getPlayersByPositionStatus("available", teamId);
+    } catch (error) {
+      console.error("Error getting available players:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Reset all players to available status
+   *
+   * @param {number} teamId - Optional team ID
+   * @returns {Promise<number>} - Number of players updated
+   */
+  async resetAllPlayerPositions(teamId = null) {
+    try {
+      // Use team ID if provided, otherwise get current user's team
+      let targetTeamId = teamId;
+      if (!targetTeamId && window.AuthService) {
+        const userTeam = window.AuthService.getUserTeam();
+        targetTeamId = userTeam?.id;
+      }
+
+      if (!targetTeamId) {
+        throw new Error("No team ID available");
+      }
+
+      const { data, error } = await this.getClient()
+        .from("players")
+        .update({
+          position_status: "available",
+          position_index: null,
+          bench_index: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("team_id", targetTeamId)
+        .neq("position_status", "available");
+
+      if (error) throw error;
+      console.log(
+        `DEBUG DatabaseService: Reset player positions for team ${targetTeamId}`
+      );
+      return data?.length || 0;
+    } catch (error) {
+      console.error("Error resetting player positions:", error);
+      throw error;
+    }
+  },
+
   // ==================== TRANSFERS OPERATIONS ====================
 
   /**
@@ -636,6 +863,346 @@ const DatabaseService = {
       return data;
     } catch (error) {
       console.error("Error updating transfer status:", error);
+      throw error;
+    }
+  },
+
+  // ==================== CACHING OPERATIONS ====================
+
+  /**
+   * Get cached data or fetch from database
+   *
+   * @param {string} key - Cache key
+   * @param {Function} fetchFunction - Function to fetch data if not cached
+   * @param {number} ttl - Time to live in milliseconds
+   * @returns {Promise<any>} - Cached or fresh data
+   */
+  async getCachedData(key, fetchFunction, ttl = this.cacheTimeout) {
+    const cached = this.cache.get(key);
+    const now = Date.now();
+
+    if (cached && now - cached.timestamp < ttl) {
+      console.log(`Cache hit for ${key}`);
+      return cached.data;
+    }
+
+    console.log(`Cache miss for ${key}, fetching from database`);
+    const data = await fetchFunction();
+    this.cache.set(key, { data, timestamp: now });
+    return data;
+  },
+
+  /**
+   * Clear cache for specific key or all cache
+   *
+   * @param {string|null} key - Cache key to clear, or null to clear all
+   * @returns {void}
+   */
+  clearCache(key = null) {
+    if (key) {
+      this.cache.delete(key);
+      console.log(`Cache cleared for key: ${key}`);
+    } else {
+      this.cache.clear();
+      console.log("All cache cleared");
+    }
+  },
+
+  /**
+   * Invalidate cache for team-related data
+   *
+   * @param {number} teamId - Team ID to invalidate cache for
+   * @returns {void}
+   */
+  invalidateTeamCache(teamId) {
+    const keysToDelete = [];
+    for (const key of this.cache.keys()) {
+      if (key.includes(`team_${teamId}`) || key.includes("team_stats")) {
+        keysToDelete.push(key);
+      }
+    }
+    keysToDelete.forEach((key) => this.cache.delete(key));
+    console.log(`Team cache invalidated for team ${teamId}`);
+  },
+
+  // ==================== TEAM STATISTICS OPERATIONS ====================
+
+  /**
+   * Get comprehensive team statistics for a specific team (OPTIMIZED)
+   *
+   * @param {number} teamId - Team ID
+   * @returns {Promise<Object>} - Team statistics object
+   */
+  async getTeamStatisticsOptimized(teamId) {
+    try {
+      console.log(`Fetching optimized team statistics for team ID: ${teamId}`);
+
+      // Get team basic info first
+      const { data: teamData, error: teamError } = await this.getClient()
+        .from("teams")
+        .select("id, team_name, team_money")
+        .eq("id", teamId)
+        .single();
+
+      if (teamError) throw teamError;
+      console.log("Team data:", teamData);
+
+      // Get team standings separately (LEFT JOIN to handle missing data)
+      const { data: standingsData, error: standingsError } =
+        await this.getClient()
+          .from("team_standings")
+          .select("matches_played, wins, losses, points, win_percentage")
+          .eq("team_id", teamId)
+          .single();
+
+      if (standingsError && standingsError.code !== "PGRST116") {
+        console.warn("No standings data found for team:", standingsError);
+      }
+      console.log("Standings data:", standingsData);
+
+      // Get squad size
+      const { data: playersData, error: playersError } = await this.getClient()
+        .from("players")
+        .select("id")
+        .eq("team_id", teamId);
+
+      if (playersError) throw playersError;
+      console.log("Players count:", playersData?.length || 0);
+
+      // Get average rating
+      const { data: avgRatingData, error: avgError } = await this.getClient()
+        .from("players")
+        .select("overall")
+        .eq("team_id", teamId);
+
+      if (avgError) throw avgError;
+
+      const averageRating =
+        avgRatingData.length > 0
+          ? (
+              avgRatingData.reduce(
+                (sum, player) => sum + (player.overall || 0),
+                0
+              ) / avgRatingData.length
+            ).toFixed(1)
+          : 0;
+
+      const result = {
+        teamId: teamData.id,
+        teamName: teamData.team_name,
+        wins: standingsData?.wins || 0,
+        losses: standingsData?.losses || 0,
+        matchesPlayed: standingsData?.matches_played || 0,
+        squadSize: playersData?.length || 0,
+        winRate: standingsData?.win_percentage || 0,
+        averageRating: parseFloat(averageRating),
+        budget: teamData.team_money || 0,
+        points: standingsData?.points || 0,
+      };
+
+      console.log("Final team statistics result:", result);
+      return result;
+    } catch (error) {
+      console.error("Error fetching optimized team statistics:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get comprehensive team statistics for a specific team (LEGACY - kept for compatibility)
+   *
+   * @param {number} teamId - Team ID
+   * @returns {Promise<Object>} - Team statistics object
+   */
+  async getTeamStatistics(teamId) {
+    try {
+      // Get team basic info including budget
+      const { data: teamData, error: teamError } = await this.getClient()
+        .from("teams")
+        .select("id, team_name, team_money")
+        .eq("id", teamId)
+        .single();
+
+      if (teamError) throw teamError;
+
+      // Get team standings for match statistics
+      const standings = await this.getTeamStandings(teamId);
+
+      // Get squad size (number of players)
+      const { data: playersData, error: playersError } = await this.getClient()
+        .from("players")
+        .select("id")
+        .eq("team_id", teamId);
+
+      if (playersError) throw playersError;
+
+      // Get average player rating
+      const { data: playersStatsData, error: playersStatsError } =
+        await this.getClient()
+          .from("players")
+          .select("overall")
+          .eq("team_id", teamId);
+
+      if (playersStatsError) throw playersStatsError;
+
+      // Calculate average rating
+      const averageRating =
+        playersStatsData.length > 0
+          ? (
+              playersStatsData.reduce(
+                (sum, player) => sum + (player.overall || 0),
+                0
+              ) / playersStatsData.length
+            ).toFixed(1)
+          : 0;
+
+      // Calculate win rate
+      const winRate =
+        standings && standings.matches_played > 0
+          ? Math.round((standings.wins / standings.matches_played) * 100)
+          : 0;
+
+      return {
+        teamId: teamData.id,
+        teamName: teamData.team_name,
+        wins: standings?.wins || 0,
+        losses: standings?.losses || 0,
+        draws: standings?.draws || 0,
+        matchesPlayed: standings?.matches_played || 0,
+        squadSize: playersData.length,
+        winRate: winRate,
+        averageRating: parseFloat(averageRating),
+        budget: teamData.team_money || 0,
+        points: standings?.points || 0,
+        goalDifference: standings?.goal_difference || 0,
+      };
+    } catch (error) {
+      console.error("Error fetching team statistics:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get user's team statistics (OPTIMIZED with caching)
+   *
+   * @returns {Promise<Object>} - User's team statistics object
+   */
+  async getUserTeamStatistics() {
+    try {
+      const userTeam = window.AuthService.getUserTeam();
+      if (!userTeam) {
+        throw new Error("No user team found");
+      }
+
+      // Use cached data with optimized query
+      return await this.getCachedData(
+        `team_stats_${userTeam.id}`,
+        () => this.getTeamStatisticsOptimized(userTeam.id),
+        2 * 60 * 1000 // 2 minutes cache for team stats
+      );
+    } catch (error) {
+      console.error("Error fetching user team statistics:", error);
+      throw error;
+    }
+  },
+
+  // ==================== STANDINGS OPERATIONS ====================
+
+  /**
+   * Get team standings for all leagues
+   *
+   * @returns {Promise<Array>} - Array of team standings objects
+   */
+  async getStandings() {
+    try {
+      const { data, error } = await this.getClient()
+        .from("team_standings")
+        .select("*")
+        .order("league_id", { ascending: true })
+        .order("points", { ascending: false })
+        .order("wins", { ascending: false })
+        .order("team_name", { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error("Error fetching standings:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get standings for a specific league
+   *
+   * @param {string} leagueName - League name to filter by
+   * @returns {Promise<Array>} - Array of team standings objects for the league
+   */
+  async getStandingsByLeague(leagueName) {
+    try {
+      const { data, error } = await this.getClient()
+        .from("team_standings")
+        .select("*")
+        .eq("league_name", leagueName)
+        .order("points", { ascending: false })
+        .order("wins", { ascending: false })
+        .order("team_name", { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error("Error fetching standings by league:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get standings for a specific team
+   *
+   * @param {number} teamId - Team ID
+   * @returns {Promise<Object|null>} - Team standings object or null
+   */
+  async getTeamStandings(teamId) {
+    try {
+      const { data, error } = await this.getClient()
+        .from("team_standings")
+        .select("*")
+        .eq("team_id", teamId)
+        .single();
+
+      if (error && error.code !== "PGRST116") throw error;
+      return data;
+    } catch (error) {
+      console.error("Error fetching team standings:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get recent matches for standings context
+   *
+   * @param {number} limit - Number of recent matches to fetch
+   * @returns {Promise<Array>} - Array of recent match objects
+   */
+  async getRecentMatches(limit = 10) {
+    try {
+      const { data, error } = await this.getClient()
+        .from("matches")
+        .select(
+          `
+          *,
+          home_team:teams!matches_home_team_id_fkey(team_name),
+          away_team:teams!matches_away_team_id_fkey(team_name),
+          league:leagues!matches_league_id_fkey(league_name)
+        `
+        )
+        .eq("status", "completed")
+        .order("match_date", { ascending: false })
+        .limit(limit);
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error("Error fetching recent matches:", error);
       throw error;
     }
   },

@@ -1,11 +1,11 @@
 /**
  * Squad Selection Component - Handles starting lineup and bench player management
  *
- * This component manages the squad selection interface, including drag-and-drop
- * functionality for placing players in starting positions and bench slots.
- * It ensures proper position validation and provides a comprehensive squad management system.
+ * This component manages the squad selection interface for displaying
+ * available players, starting positions, and bench slots.
+ * It provides a comprehensive squad management system.
  *
- * @fileoverview Squad selection component with drag-and-drop functionality
+ * @fileoverview Squad selection component for player management
  * @author Volleyball Manager Team
  * @version 0.2.0
  */
@@ -14,7 +14,7 @@
  * SquadSelection component object
  *
  * This object contains all functionality for managing squad selection,
- * including drag-and-drop operations, position validation, and squad management.
+ * including position validation and squad management.
  */
 const SquadSelection = {
   // Squad position requirements (7 starting positions)
@@ -29,19 +29,22 @@ const SquadSelection = {
   ],
 
   // Component state
-  draggedPlayer: null,
-  draggedFrom: null,
-  isDragActive: false,
   isInitialized: false,
   isPopulatingPlayers: false,
+
+  // Filter state
+  currentFilter: "all",
+  searchTerm: "",
+  allPlayers: [],
+  filteredPlayers: [],
 
   /**
    * Initialize the squad selection component
    *
-   * This function sets up the squad selection interface with drag-and-drop
-   * functionality and populates the available players list.
+   * This function sets up the squad selection interface and populates
+   * the available players list.
    *
-   * @returns {void}
+   * @returns {Promise<void>}
    */
   async initialize() {
     try {
@@ -55,41 +58,84 @@ const SquadSelection = {
 
       console.log("Initializing Squad Selection component...");
 
+      // Show loading screen for squad selection
+      window.DOMHelpers.showComponentLoading("Squad Selection", 0);
+
       // Initialize the squad selection interface
       await this.initializeSquadSelection();
 
       this.isInitialized = true;
       console.log("Squad Selection component initialized successfully");
+
+      // Hide loading screen after successful initialization
+      window.DOMHelpers.hideLoadingScreen();
     } catch (error) {
       console.error("Error initializing Squad Selection:", error);
+      // Hide loading screen on error
+      window.DOMHelpers.hideLoadingScreen();
+      // Show error notification
+      window.DOMHelpers.showNotification(
+        "Error loading squad selection",
+        "error"
+      );
       throw error;
     }
   },
 
   /**
-   * Initialize squad selection interface with drag and drop
+   * Initialize squad selection interface
    *
    * This function creates the starting positions, bench slots, and available
-   * players sections with all necessary event listeners for drag-and-drop.
+   * players sections.
    *
-   * @returns {void}
+   * @returns {Promise<void>}
    */
   async initializeSquadSelection() {
     try {
+      // Update loading progress - creating positions
+      window.DOMHelpers.updateLoadingMessage("Setting up squad positions...");
+      window.DOMHelpers.updateLoadingProgress(20);
+
       // Create starting positions
       this.createStartingPositions();
+
+      // Update loading progress - creating bench slots
+      window.DOMHelpers.updateLoadingMessage("Setting up bench slots...");
+      window.DOMHelpers.updateLoadingProgress(40);
 
       // Create bench slots
       this.createBenchSlots();
 
+      // Update loading progress - loading players
+      window.DOMHelpers.updateLoadingMessage("Loading players...");
+      window.DOMHelpers.updateLoadingProgress(60);
+
       // Populate available players
       await this.populateAvailablePlayers();
 
-      // Set up drag and drop event listeners
-      this.setupDragAndDropListeners();
+      // Update loading progress - setting up interactions
+      window.DOMHelpers.updateLoadingMessage("Setting up interactions...");
+      window.DOMHelpers.updateLoadingProgress(80);
+
+      // Update loading progress - setting up filters
+      window.DOMHelpers.updateLoadingMessage("Setting up player filters...");
+      window.DOMHelpers.updateLoadingProgress(85);
+
+      // Set up filter functionality
+      this.setupFilterControls();
+
+      // Update loading progress - loading saved selections
+      window.DOMHelpers.updateLoadingMessage(
+        "Loading saved squad selections..."
+      );
+      window.DOMHelpers.updateLoadingProgress(90);
 
       // Load saved squad selections
       await this.loadSavedSquadSelections();
+
+      // Update loading progress - complete
+      window.DOMHelpers.updateLoadingMessage("Squad selection ready!");
+      window.DOMHelpers.updateLoadingProgress(100);
     } catch (error) {
       console.error("Error initializing squad selection interface:", error);
       throw error;
@@ -100,7 +146,7 @@ const SquadSelection = {
    * Create starting position slots
    *
    * This function creates the 7 starting position slots with appropriate
-   * labels and drag-and-drop event listeners.
+   * labels.
    *
    * @returns {void}
    */
@@ -125,10 +171,7 @@ const SquadSelection = {
                 <div class="position-slot-player-modern" id="starting-${index}"></div>
             `;
 
-      // Add drag and drop event listeners
-      slot.addEventListener("dragover", this.handleDragOver.bind(this));
-      slot.addEventListener("drop", this.handleDrop.bind(this));
-      slot.addEventListener("dragleave", this.handleDragLeave.bind(this));
+      // Position slots are now static (no drag and drop)
 
       startingPositions.appendChild(slot);
     });
@@ -138,7 +181,7 @@ const SquadSelection = {
    * Create bench slots
    *
    * This function creates the bench slots for substitute players
-   * with appropriate labels and drag-and-drop event listeners.
+   * with appropriate labels.
    *
    * @returns {void}
    */
@@ -161,10 +204,7 @@ const SquadSelection = {
                 <div class="bench-slot-player-modern" id="bench-${i}"></div>
             `;
 
-      // Add drag and drop event listeners
-      slot.addEventListener("dragover", this.handleDragOver.bind(this));
-      slot.addEventListener("drop", this.handleDrop.bind(this));
-      slot.addEventListener("dragleave", this.handleDragLeave.bind(this));
+      // Bench slots are now static (no drag and drop)
 
       benchSlots.appendChild(slot);
     }
@@ -173,8 +213,7 @@ const SquadSelection = {
   /**
    * Populate the available players list
    *
-   * This function creates draggable player cards for all available players
-   * and sets up the necessary drag-and-drop event listeners.
+   * This function creates player cards for all available players.
    *
    * @returns {Promise<void>}
    */
@@ -197,53 +236,67 @@ const SquadSelection = {
       return;
     }
 
-    // Clear existing content
-    availablePlayers.innerHTML = "";
+    try {
+      // Show loading state in the available players section
+      availablePlayers.innerHTML =
+        '<div class="loading-placeholder">Loading players...</div>';
 
-    // Get all players from database
-    const players = await window.DatabaseService.getPlayers();
+      // Get available players from database (only those with position_status = 'available')
+      const players = await window.DatabaseService.getAvailablePlayers();
 
-    console.log("DEBUG SquadSelection: Raw players from database:", players);
-    console.log(
-      "DEBUG SquadSelection: Number of players from database:",
-      players.length
-    );
-
-    // Create draggable player cards
-    players.forEach((player, index) => {
       console.log(
-        `DEBUG SquadSelection: Creating card ${index} for player:`,
-        player.player_name,
-        "ID:",
-        player.id
+        "DEBUG SquadSelection: Available players from database:",
+        players
       );
-      const playerCard = this.createDraggablePlayerCard(player, index);
-      availablePlayers.appendChild(playerCard);
-    });
+      console.log(
+        "DEBUG SquadSelection: Number of available players from database:",
+        players.length
+      );
 
-    console.log(
-      "DEBUG SquadSelection: Final availablePlayers children count:",
-      availablePlayers.children.length
-    );
-    this.isPopulatingPlayers = false;
-    console.log("DEBUG SquadSelection: Finished populateAvailablePlayers()");
+      // Store players for filtering
+      this.allPlayers = players || [];
+      this.filteredPlayers = [...this.allPlayers];
+
+      // Clear loading state
+      availablePlayers.innerHTML = "";
+
+      if (!players || players.length === 0) {
+        availablePlayers.innerHTML =
+          '<div class="no-players">No players available</div>';
+        this.isPopulatingPlayers = false;
+        return;
+      }
+
+      // Create player cards
+      this.renderFilteredPlayers();
+
+      console.log(
+        "DEBUG SquadSelection: Final availablePlayers children count:",
+        availablePlayers.children.length
+      );
+    } catch (error) {
+      console.error("Error populating available players:", error);
+      availablePlayers.innerHTML =
+        '<div class="error-message">Error loading players. Please try again.</div>';
+    } finally {
+      this.isPopulatingPlayers = false;
+      console.log("DEBUG SquadSelection: Finished populateAvailablePlayers()");
+    }
   },
 
   /**
-   * Create a draggable player card
+   * Create a player card
    *
-   * This function creates a player card that can be dragged to squad positions
-   * with all necessary attributes and event listeners.
+   * This function creates a player card for display in the available players section.
    *
    * @param {Object} player - Player object
    * @param {number} index - Player index
-   * @returns {HTMLElement} - Draggable player card element
+   * @returns {HTMLElement} - Player card element
    */
-  createDraggablePlayerCard(player, index) {
+  createPlayerCard(player, index) {
     const playerCard = document.createElement("div");
     playerCard.className = "available-player-card-modern";
-    playerCard.draggable = true;
-    playerCard.dataset.playerId = index;
+    playerCard.dataset.playerId = player.id;
     playerCard.dataset.playerPosition = player.position;
 
     const initials = this.getPlayerInitials(
@@ -265,10 +318,7 @@ const SquadSelection = {
             }</div>
         `;
 
-    // Add drag event listeners
-    playerCard.addEventListener("dragstart", this.handleDragStart.bind(this));
-    playerCard.addEventListener("dragend", this.handleDragEnd.bind(this));
-
+    // Player cards are now static (no drag and drop)
     return playerCard;
   },
 
@@ -285,457 +335,10 @@ const SquadSelection = {
   },
 
   /**
-   * Setup drag and drop event listeners for containers
-   *
-   * This function sets up the necessary event listeners for drag-and-drop
-   * operations on the available players container.
-   *
-   * @returns {void}
-   */
-  setupDragAndDropListeners() {
-    const availablePlayers = document.getElementById("availablePlayers");
-    if (availablePlayers) {
-      availablePlayers.addEventListener(
-        "dragover",
-        this.handleDragOver.bind(this)
-      );
-      availablePlayers.addEventListener("drop", this.handleDrop.bind(this));
-      availablePlayers.addEventListener(
-        "dragleave",
-        this.handleDragLeave.bind(this)
-      );
-    }
-  },
-
-  /**
-   * Handle drag start event
-   *
-   * This function is called when a player card starts being dragged.
-   * It sets up the drag data and visual feedback.
-   *
-   * @param {Event} e - Drag event
-   * @returns {void}
-   */
-  handleDragStart(e) {
-    try {
-      const playerId = e.target.dataset.playerId;
-      const playerPosition = e.target.dataset.playerPosition;
-
-      // Set drag data
-      e.dataTransfer.setData("text/plain", playerId);
-      e.dataTransfer.setData("player-position", playerPosition);
-      e.dataTransfer.setData("source-type", "available");
-      e.dataTransfer.setData("source-element", e.target.id || "");
-
-      // Store drag state
-      this.draggedPlayer = playerId;
-      this.draggedFrom = "available";
-      this.isDragActive = true;
-
-      // Add visual feedback
-      e.target.classList.add("dragging-modern");
-
-      console.log(`Started dragging player ${playerId}`);
-    } catch (error) {
-      console.error("Error handling drag start:", error);
-    }
-  },
-
-  /**
-   * Handle drag end event
-   *
-   * This function is called when a drag operation ends.
-   * It cleans up the drag state and visual feedback.
-   *
-   * @param {Event} e - Drag event
-   * @returns {void}
-   */
-  handleDragEnd(e) {
-    try {
-      // Remove visual feedback
-      e.target.classList.remove("dragging-modern");
-
-      // Clear drag state
-      this.draggedPlayer = null;
-      this.draggedFrom = null;
-      this.isDragActive = false;
-
-      console.log("Drag operation ended");
-    } catch (error) {
-      console.error("Error handling drag end:", error);
-    }
-  },
-
-  /**
-   * Handle drag over event
-   *
-   * This function is called when a dragged element is over a drop target.
-   * It prevents the default behavior to allow dropping.
-   *
-   * @param {Event} e - Drag event
-   * @returns {void}
-   */
-  handleDragOver(e) {
-    e.preventDefault();
-    e.currentTarget.classList.add("drop-target-modern");
-  },
-
-  /**
-   * Handle drag leave event
-   *
-   * This function is called when a dragged element leaves a drop target.
-   * It removes the drag-over visual feedback.
-   *
-   * @param {Event} e - Drag event
-   * @returns {void}
-   */
-  handleDragLeave(e) {
-    e.currentTarget.classList.remove("drop-target-modern");
-  },
-
-  /**
-   * Handle drop event
-   *
-   * This function is called when a player is dropped on a valid target.
-   * It handles the placement logic and validation.
-   *
-   * @param {Event} e - Drop event
-   * @returns {Promise<void>}
-   */
-  async handleDrop(e) {
-    try {
-      e.preventDefault();
-      e.currentTarget.classList.remove("drag-over");
-
-      // Get drag data
-      const playerId = e.dataTransfer.getData("text/plain");
-      const playerPosition = e.dataTransfer.getData("player-position");
-      const sourceType = e.dataTransfer.getData("source-type");
-      const sourceElement = e.dataTransfer.getData("source-element");
-
-      // Get player data
-      const players = await window.DatabaseService.getPlayers();
-      const player = players.find((p) => p.id === parseInt(playerId));
-      const slot = e.currentTarget;
-
-      if (!player) {
-        console.error("Player not found:", playerId);
-        return;
-      }
-
-      // Handle drop back to available players section
-      if (slot.id === "availablePlayers" || slot.closest("#availablePlayers")) {
-        if (sourceType === "placed") {
-          this.clearPreviousPlacement(sourceElement);
-          this.updateAvailablePlayerVisibility(playerId, "placed");
-        }
-        return;
-      }
-
-      // Check if slot is already occupied
-      const existingPlayer = slot.querySelector(".placed-player");
-      if (existingPlayer && existingPlayer.id !== sourceElement) {
-        this.showInvalidDrop(slot);
-        return;
-      }
-
-      // Handle starting position slots
-      if (slot.dataset.position !== undefined) {
-        this.handleStartingPositionDrop(
-          slot,
-          player,
-          playerId,
-          playerPosition,
-          sourceType,
-          sourceElement
-        );
-      }
-      // Handle bench slots
-      else if (slot.dataset.bench !== undefined) {
-        this.handleBenchDrop(
-          slot,
-          player,
-          playerId,
-          playerPosition,
-          sourceType,
-          sourceElement
-        );
-      }
-
-      // Update available player visibility
-      this.updateAvailablePlayerVisibility(playerId, sourceType);
-
-      // Save squad selections after successful drop
-      await this.saveSquadSelections();
-    } catch (error) {
-      console.error("Error handling drop:", error);
-    }
-  },
-
-  /**
-   * Handle drop on starting position slot
-   *
-   * This function handles the logic for placing a player in a starting position,
-   * including position validation and placement.
-   *
-   * @param {HTMLElement} slot - Position slot element
-   * @param {Object} player - Player object
-   * @param {string} playerId - Player ID
-   * @param {string} playerPosition - Player position
-   * @param {string} sourceType - Source type (available or placed)
-   * @param {string} sourceElement - Source element ID
-   * @returns {void}
-   */
-  handleStartingPositionDrop(
-    slot,
-    player,
-    playerId,
-    playerPosition,
-    sourceType,
-    sourceElement
-  ) {
-    const requiredPosition = slot.dataset.requiredPosition;
-
-    // Check position compatibility
-    if (playerPosition !== requiredPosition) {
-      this.showInvalidDrop(slot);
-      return;
-    }
-
-    // Clear previous placement if moving from another slot
-    if (sourceType === "placed") {
-      this.clearPreviousPlacement(sourceElement);
-    }
-
-    // Place player in starting position
-    this.placePlayerInStartingPosition(slot, player, playerId, playerPosition);
-  },
-
-  /**
-   * Handle drop on bench slot
-   *
-   * This function handles the logic for placing a player on the bench.
-   *
-   * @param {HTMLElement} slot - Bench slot element
-   * @param {Object} player - Player object
-   * @param {string} playerId - Player ID
-   * @param {string} playerPosition - Player position
-   * @param {string} sourceType - Source type (available or placed)
-   * @param {string} sourceElement - Source element ID
-   * @returns {void}
-   */
-  handleBenchDrop(
-    slot,
-    player,
-    playerId,
-    playerPosition,
-    sourceType,
-    sourceElement
-  ) {
-    // Clear previous placement if moving from another slot
-    if (sourceType === "placed") {
-      this.clearPreviousPlacement(sourceElement);
-    }
-
-    // Place player on bench
-    this.placePlayerOnBench(slot, player, playerId, playerPosition);
-  },
-
-  /**
-   * Place a player in a starting position
-   *
-   * This function creates the visual representation of a player in a starting position slot.
-   *
-   * @param {HTMLElement} slot - Position slot element
-   * @param {Object} player - Player object
-   * @param {string} playerId - Player ID
-   * @param {string} playerPosition - Player position
-   * @returns {void}
-   */
-  placePlayerInStartingPosition(slot, player, playerId, playerPosition) {
-    const playerSlot = slot.querySelector(".position-slot-player-modern");
-    const positionAbbrev = window.DOMHelpers.getPositionAbbrev(playerPosition);
-    const initials = this.getPlayerInitials(
-      player.player_name || "Unknown Player"
-    );
-
-    playerSlot.innerHTML = `
-            <div class="position-slot-player-info-modern">
-                <div class="position-slot-player-avatar-modern">${initials}</div>
-                <div class="position-slot-player-name-modern">${player.player_name}</div>
-                <div class="position-slot-player-position-modern" data-position="${positionAbbrev}">${positionAbbrev}</div>
-                <div class="position-slot-player-overall-modern">${player.overall}</div>
-            </div>
-        `;
-
-    slot.classList.add("position-slot-modern--occupied");
-
-    // Add drag event listeners to placed player
-    const placedPlayer = playerSlot.querySelector(
-      ".position-slot-player-info-modern"
-    );
-    placedPlayer.draggable = true;
-    placedPlayer.dataset.playerId = playerId;
-    placedPlayer.dataset.playerPosition = playerPosition;
-    placedPlayer.id = `placed-starting-${slot.dataset.position}`;
-    placedPlayer.addEventListener("dragstart", this.handleDragStart.bind(this));
-    placedPlayer.addEventListener("dragend", this.handleDragEnd.bind(this));
-  },
-
-  /**
-   * Place a player on the bench
-   *
-   * This function creates the visual representation of a player on the bench.
-   *
-   * @param {HTMLElement} slot - Bench slot element
-   * @param {Object} player - Player object
-   * @param {string} playerId - Player ID
-   * @param {string} playerPosition - Player position
-   * @returns {void}
-   */
-  placePlayerOnBench(slot, player, playerId, playerPosition) {
-    const playerSlot = slot.querySelector(".bench-slot-player-modern");
-    const positionAbbrev = window.DOMHelpers.getPositionAbbrev(playerPosition);
-    const initials = this.getPlayerInitials(
-      player.player_name || "Unknown Player"
-    );
-
-    playerSlot.innerHTML = `
-            <div class="bench-slot-player-info-modern">
-                <div class="bench-slot-player-avatar-modern">${initials}</div>
-                <div class="bench-slot-player-name-modern">${player.player_name}</div>
-                <div class="bench-slot-player-position-modern" data-position="${positionAbbrev}">${positionAbbrev}</div>
-                <div class="bench-slot-player-overall-modern">${player.overall}</div>
-            </div>
-        `;
-
-    slot.classList.add("bench-slot-modern--occupied");
-
-    // Add drag event listeners to placed player
-    const placedPlayer = playerSlot.querySelector(
-      ".bench-slot-player-info-modern"
-    );
-    placedPlayer.draggable = true;
-    placedPlayer.dataset.playerId = playerId;
-    placedPlayer.dataset.playerPosition = playerPosition;
-    placedPlayer.id = `placed-bench-${slot.dataset.bench}`;
-    placedPlayer.addEventListener("dragstart", this.handleDragStart.bind(this));
-    placedPlayer.addEventListener("dragend", this.handleDragEnd.bind(this));
-  },
-
-  /**
-   * Show invalid drop feedback
-   *
-   * This function provides visual feedback when an invalid drop occurs.
-   *
-   * @param {HTMLElement} slot - Slot element that received invalid drop
-   * @returns {void}
-   */
-  showInvalidDrop(slot) {
-    slot.classList.add("invalid-drop-modern");
-    setTimeout(() => slot.classList.remove("invalid-drop-modern"), 1000);
-  },
-
-  /**
-   * Update available player visibility
-   *
-   * This function manages the visibility of players in the available players list
-   * based on whether they are currently placed in the squad.
-   *
-   * @param {string} playerId - Player ID
-   * @param {string} sourceType - Source type (available or placed)
-   * @returns {void}
-   */
-  updateAvailablePlayerVisibility(playerId, sourceType) {
-    const originalCard = document.querySelector(
-      `[data-player-id="${playerId}"].available-player-card-modern`
-    );
-
-    if (sourceType === "available") {
-      // Hide player from available list when placed
-      if (originalCard) {
-        originalCard.style.display = "none";
-      }
-    } else if (sourceType === "placed") {
-      // Show player in available list when removed from squad
-      if (originalCard) {
-        originalCard.style.display = "flex";
-      }
-    }
-  },
-
-  /**
-   * Update all available player visibility based on current squad
-   *
-   * This function checks all players in the current squad and hides them
-   * from the available players list to prevent duplicates.
-   *
-   * @returns {void}
-   */
-  updateAllAvailablePlayerVisibility() {
-    // Get all currently placed players
-    const placedPlayers = document.querySelectorAll(
-      ".position-slot-player-info-modern, .bench-slot-player-info-modern"
-    );
-    const placedPlayerIds = new Set();
-
-    placedPlayers.forEach((player) => {
-      const playerId = player.dataset.playerId;
-      if (playerId) {
-        placedPlayerIds.add(playerId);
-      }
-    });
-
-    // Update visibility of all available players
-    const availablePlayers = document.querySelectorAll(
-      ".available-player-card-modern"
-    );
-    availablePlayers.forEach((player) => {
-      const playerId = player.dataset.playerId;
-      if (placedPlayerIds.has(playerId)) {
-        player.style.display = "none";
-      } else {
-        player.style.display = "flex";
-      }
-    });
-  },
-
-  /**
-   * Clear previous player placement
-   *
-   * This function removes a player from their previous slot when moving them.
-   *
-   * @param {string} sourceElementId - ID of source element to clear
-   * @returns {void}
-   */
-  clearPreviousPlacement(sourceElementId) {
-    if (!sourceElementId) return;
-
-    const sourceElement = document.getElementById(sourceElementId);
-    if (sourceElement) {
-      const parentSlot = sourceElement.closest(
-        ".position-slot-modern, .bench-slot-modern"
-      );
-      if (parentSlot) {
-        const playerSlot = parentSlot.querySelector(
-          ".position-slot-player-modern, .bench-slot-player-modern"
-        );
-        if (playerSlot) {
-          playerSlot.innerHTML = "";
-        }
-        parentSlot.classList.remove(
-          "position-slot-modern--occupied",
-          "bench-slot-modern--occupied"
-        );
-      }
-    }
-  },
-
-  /**
    * Save current squad selections to database
    *
    * This function saves the current squad configuration to the database
-   * so it can be restored when the user returns to the page.
+   * by updating each player's position_status and indices.
    *
    * @returns {Promise<void>}
    */
@@ -743,26 +346,35 @@ const SquadSelection = {
     try {
       const squad = await this.getCurrentSquad();
 
-      // Create squad data object
-      const squadData = {
-        team_id: 1, // Assuming team_id 1 is the user's team
-        starting_players: squad.starting.map((pos) => ({
-          position: pos.position,
-          player_id: pos.playerId,
-        })),
-        bench_players: squad.bench.map((bench) => ({
-          player_id: bench.playerId,
-        })),
-        updated_at: new Date().toISOString(),
-      };
+      // Reset all players to available status first
+      await window.DatabaseService.resetAllPlayerPositions();
 
-      // Save to localStorage as a fallback (since we don't have a dedicated squad table)
-      localStorage.setItem(
-        "volleyball_manager_squad_selections",
-        JSON.stringify(squadData)
-      );
+      // Update starting players to starter status with position indices
+      for (let i = 0; i < squad.starting.length; i++) {
+        const pos = squad.starting[i];
+        if (pos.playerId) {
+          await window.DatabaseService.updatePlayerPositionStatus(
+            parseInt(pos.playerId),
+            "starter",
+            i
+          );
+        }
+      }
 
-      console.log("Squad selections saved successfully");
+      // Update bench players to bench status with bench indices
+      for (let i = 0; i < squad.bench.length; i++) {
+        const bench = squad.bench[i];
+        if (bench.playerId) {
+          await window.DatabaseService.updatePlayerPositionStatus(
+            parseInt(bench.playerId),
+            "bench",
+            null,
+            i
+          );
+        }
+      }
+
+      console.log("Squad selections saved successfully to database");
     } catch (error) {
       console.error("Error saving squad selections:", error);
     }
@@ -772,71 +384,57 @@ const SquadSelection = {
    * Load saved squad selections from database
    *
    * This function loads previously saved squad selections and restores
-   * the players to their correct positions.
+   * the players to their correct positions based on their position_status.
    *
    * @returns {Promise<void>}
    */
   async loadSavedSquadSelections() {
     try {
-      // Load from localStorage
-      const savedData = localStorage.getItem(
-        "volleyball_manager_squad_selections"
-      );
-      if (!savedData) {
-        console.log("No saved squad selections found");
-        return;
-      }
+      console.log("Loading squad selections from database...");
 
-      const squadData = JSON.parse(savedData);
-      console.log("Loading saved squad selections:", squadData);
+      // Load starting players from database
+      const startingPlayers = await window.DatabaseService.getStartingLineup();
+      console.log("Starting players from database:", startingPlayers);
 
-      // Restore starting players
-      if (squadData.starting_players) {
-        for (const startingPlayer of squadData.starting_players) {
-          if (startingPlayer.player_id) {
-            await this.restorePlayerToStartingPosition(
-              startingPlayer.position,
-              startingPlayer.player_id
-            );
-          }
+      // Load bench players from database
+      const benchPlayers = await window.DatabaseService.getBenchPlayers();
+      console.log("Bench players from database:", benchPlayers);
+
+      // Restore starting players to their positions
+      for (const player of startingPlayers) {
+        if (player.position_index !== null) {
+          await this.restorePlayerToStartingPositionByIndex(
+            player.position_index,
+            player.id
+          );
         }
       }
 
-      // Restore bench players
-      if (squadData.bench_players) {
-        for (let i = 0; i < squadData.bench_players.length; i++) {
-          const benchPlayer = squadData.bench_players[i];
-          if (benchPlayer.player_id) {
-            await this.restorePlayerToBench(i, benchPlayer.player_id);
-          }
+      // Restore bench players to their slots
+      for (const player of benchPlayers) {
+        if (player.bench_index !== null) {
+          await this.restorePlayerToBenchByIndex(player.bench_index, player.id);
         }
       }
 
       // Update visibility of all available players to prevent duplicates
       this.updateAllAvailablePlayerVisibility();
 
-      console.log("Squad selections loaded successfully");
+      console.log("Squad selections loaded successfully from database");
     } catch (error) {
       console.error("Error loading saved squad selections:", error);
     }
   },
 
   /**
-   * Restore a player to a starting position
+   * Restore a player to a starting position by position index
    *
-   * @param {string} position - Position name
+   * @param {number} positionIndex - Position index (0-6)
    * @param {number} playerId - Player ID
    * @returns {Promise<void>}
    */
-  async restorePlayerToStartingPosition(position, playerId) {
+  async restorePlayerToStartingPositionByIndex(positionIndex, playerId) {
     try {
-      // Find the position slot
-      const positionIndex = this.squadPositions.indexOf(position);
-      if (positionIndex === -1) {
-        console.error("Invalid position:", position);
-        return;
-      }
-
       const slot = document.querySelector(`[data-position="${positionIndex}"]`);
       if (!slot) {
         console.error("Position slot not found:", positionIndex);
@@ -866,13 +464,38 @@ const SquadSelection = {
   },
 
   /**
-   * Restore a player to a bench slot
+   * Restore a player to a starting position by position name (legacy method)
    *
-   * @param {number} benchIndex - Bench slot index
+   * @param {string} position - Position name
    * @param {number} playerId - Player ID
    * @returns {Promise<void>}
    */
-  async restorePlayerToBench(benchIndex, playerId) {
+  async restorePlayerToStartingPosition(position, playerId) {
+    try {
+      // Find the position slot
+      const positionIndex = this.squadPositions.indexOf(position);
+      if (positionIndex === -1) {
+        console.error("Invalid position:", position);
+        return;
+      }
+
+      await this.restorePlayerToStartingPositionByIndex(
+        positionIndex,
+        playerId
+      );
+    } catch (error) {
+      console.error("Error restoring player to starting position:", error);
+    }
+  },
+
+  /**
+   * Restore a player to a bench slot by bench index
+   *
+   * @param {number} benchIndex - Bench slot index (0-8)
+   * @param {number} playerId - Player ID
+   * @returns {Promise<void>}
+   */
+  async restorePlayerToBenchByIndex(benchIndex, playerId) {
     try {
       const slot = document.querySelector(`[data-bench="${benchIndex}"]`);
       if (!slot) {
@@ -892,6 +515,21 @@ const SquadSelection = {
 
       // Hide player from available list
       this.updateAvailablePlayerVisibility(playerId, "available");
+    } catch (error) {
+      console.error("Error restoring player to bench:", error);
+    }
+  },
+
+  /**
+   * Restore a player to a bench slot (legacy method)
+   *
+   * @param {number} benchIndex - Bench slot index
+   * @param {number} playerId - Player ID
+   * @returns {Promise<void>}
+   */
+  async restorePlayerToBench(benchIndex, playerId) {
+    try {
+      await this.restorePlayerToBenchByIndex(benchIndex, playerId);
     } catch (error) {
       console.error("Error restoring player to bench:", error);
     }
@@ -984,54 +622,151 @@ const SquadSelection = {
    */
   async clearSquad() {
     try {
+      // Reset all players to available status in database
+      await window.DatabaseService.resetAllPlayerPositions();
+
       // Clear all starting positions
       for (let i = 0; i < this.squadPositions.length; i++) {
-        const slot = document.getElementById(`starting-${i}`);
+        const slot = document.querySelector(`[data-position="${i}"]`);
         if (slot) {
-          slot.innerHTML = `
-                        <div class="position-slot-label-modern">${this.squadPositions[i]}</div>
-                        <div class="position-slot-player-modern" id="starting-${i}"></div>
-                    `;
+          const playerSlot = slot.querySelector(".position-slot-player-modern");
+          if (playerSlot) {
+            playerSlot.innerHTML = "";
+          }
+          slot.classList.remove("position-slot-modern--occupied");
         }
       }
 
       // Clear all bench slots
       for (let i = 0; i < 9; i++) {
-        const slot = document.getElementById(`bench-${i}`);
+        const slot = document.querySelector(`[data-bench="${i}"]`);
         if (slot) {
-          slot.innerHTML = `
-                        <div class="bench-slot-player-modern" id="bench-${i}"></div>
-                    `;
+          const playerSlot = slot.querySelector(".bench-slot-player-modern");
+          if (playerSlot) {
+            playerSlot.innerHTML = "";
+          }
+          slot.classList.remove("bench-slot-modern--occupied");
         }
       }
 
-      // Clear occupied classes from all slots
-      const allSlots = document.querySelectorAll(
-        ".position-slot-modern, .bench-slot-modern"
-      );
-      allSlots.forEach((slot) => {
-        slot.classList.remove(
-          "position-slot-modern--occupied",
-          "bench-slot-modern--occupied"
-        );
-      });
-
-      // Show all available players
-      const availablePlayers = document.querySelectorAll(
-        ".available-player-card-modern"
-      );
-      availablePlayers.forEach((player) => {
-        player.style.display = "flex";
-      });
-
-      // Save squad selections after clearing
-      await this.saveSquadSelections();
+      // Refresh available players to show all players
+      await this.populateAvailablePlayers();
 
       console.log("Squad cleared successfully");
     } catch (error) {
       console.error("Error clearing squad:", error);
       window.DOMHelpers.showNotification("Error clearing squad", "error");
     }
+  },
+
+  /**
+   * Setup filter controls
+   *
+   * This function sets up the search and filter functionality
+   * for the available players section.
+   *
+   * @returns {void}
+   */
+  setupFilterControls() {
+    // Search input
+    const searchInput = document.getElementById("squadPlayerSearch");
+    if (searchInput) {
+      searchInput.addEventListener("input", (e) => {
+        this.searchTerm = e.target.value;
+        this.applyFiltersAndSearch();
+      });
+    }
+
+    // Filter buttons
+    const filterButtons = document.querySelectorAll(".squad-filter-button");
+    filterButtons.forEach((button) => {
+      button.addEventListener("click", (e) => {
+        // Remove active class from all buttons
+        filterButtons.forEach((btn) =>
+          btn.classList.remove("squad-filter-button--active")
+        );
+        // Add active class to clicked button
+        e.target.classList.add("squad-filter-button--active");
+
+        this.currentFilter = e.target.dataset.position;
+        this.applyFiltersAndSearch();
+      });
+    });
+
+    console.log("Squad filter controls setup complete");
+  },
+
+  /**
+   * Apply filters and search to available players
+   *
+   * This function filters the available players based on the current
+   * search term and position filter.
+   *
+   * @returns {void}
+   */
+  applyFiltersAndSearch() {
+    let filtered = [...this.allPlayers];
+
+    // Apply position filter
+    if (this.currentFilter !== "all") {
+      filtered = filtered.filter(
+        (player) => player.position === this.currentFilter
+      );
+    }
+
+    // Apply search filter
+    if (this.searchTerm.trim()) {
+      const searchLower = this.searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (player) =>
+          (player.player_name || "").toLowerCase().includes(searchLower) ||
+          (player.position || "").toLowerCase().includes(searchLower)
+      );
+    }
+
+    this.filteredPlayers = filtered;
+    this.renderFilteredPlayers();
+  },
+
+  /**
+   * Render filtered players to the available players grid
+   *
+   * This function renders the filtered players to the available players
+   * section and updates visibility of players that are already in the squad.
+   *
+   * @returns {void}
+   */
+  renderFilteredPlayers() {
+    const availablePlayers = document.getElementById("availablePlayers");
+    if (!availablePlayers) return;
+
+    // Clear existing content
+    availablePlayers.innerHTML = "";
+
+    if (this.filteredPlayers.length === 0) {
+      availablePlayers.innerHTML =
+        '<div class="no-players">No players match your current filters.</div>';
+      return;
+    }
+
+    // Create player cards
+    this.filteredPlayers.forEach((player, index) => {
+      console.log(
+        `DEBUG SquadSelection: Creating card ${index} for player:`,
+        player.player_name,
+        "ID:",
+        player.id
+      );
+      const playerCard = this.createPlayerCard(player, index);
+      availablePlayers.appendChild(playerCard);
+    });
+
+    // Player cards are now static
+
+    console.log(
+      "DEBUG SquadSelection: Final availablePlayers children count:",
+      availablePlayers.children.length
+    );
   },
 };
 

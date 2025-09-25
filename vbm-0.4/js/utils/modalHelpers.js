@@ -200,12 +200,12 @@ function closePlayerModal() {
  * Show team details modal with comprehensive information
  *
  * This function creates and displays a detailed modal for a team,
- * including team statistics, stadium information, and performance data.
+ * including team statistics, league information, and performance data.
  *
  * @param {Object} team - Team object to display
  * @returns {void}
  */
-function showTeamModal(team) {
+async function showTeamModal(team) {
   // Validate team object
   if (!team) {
     console.error("No team data provided to showTeamModal");
@@ -220,73 +220,142 @@ function showTeamModal(team) {
     return;
   }
 
-  // Generate team modal content HTML
-  modalContent.innerHTML = `
-        <div class="modal__header">
-            <h2 class="modal__title">Team Details</h2>
-            <button class="modal__close" onclick="closeTeamModal()">&times;</button>
-        </div>
-        <div class="modal__player-info">
-            <div class="modal__player-face">🏐</div>
-            <div class="modal__player-details">
-                <h3 class="modal__player-name">${
-                  team.name || "Unknown Team"
-                }</h3>
-                <div class="player-card__position" data-position="Team">Professional Team</div>
-            </div>
-        </div>
-        <div class="modal__player-meta">
-            <div class="modal__meta-item">
-                <div class="modal__meta-label">League</div>
-                <div class="modal__meta-value">${team.league || "N/A"}</div>
-            </div>
-            <div class="modal__meta-item">
-                <div class="modal__meta-label">Founded</div>
-                <div class="modal__meta-value">${team.founded || "N/A"}</div>
-            </div>
-            <div class="modal__meta-item">
-                <div class="modal__meta-label">Stadium</div>
-                <div class="modal__meta-value">${team.stadium || "N/A"}</div>
-            </div>
-            <div class="modal__meta-item">
-                <div class="modal__meta-label">Capacity</div>
-                <div class="modal__meta-value">${
-                  team.capacity ? team.capacity.toLocaleString() : "N/A"
-                }</div>
-            </div>
-        </div>
-        <div class="modal__stats">
-            <div class="modal__stat">
-                <div class="modal__stat-value">${team.played || "N/A"}</div>
-                <div class="modal__stat-label">Matches Played</div>
-            </div>
-            <div class="modal__stat">
-                <div class="modal__stat-value">${team.won || "N/A"}</div>
-                <div class="modal__stat-label">Wins</div>
-            </div>
-            <div class="modal__stat">
-                <div class="modal__stat-value">${team.lost || "N/A"}</div>
-                <div class="modal__stat-label">Losses</div>
-            </div>
-            <div class="modal__stat">
-                <div class="modal__stat-value">${team.points || "N/A"}</div>
-                <div class="modal__stat-label">Points</div>
-            </div>
-            <div class="modal__stat">
-                <div class="modal__stat-value">${team.goalDiff || "N/A"}</div>
-                <div class="modal__stat-label">Goal Difference</div>
-            </div>
-            <div class="modal__stat">
-                <div class="modal__stat-value">${
-                  team.winRate ? team.winRate + "%" : "N/A"
-                }</div>
-                <div class="modal__stat-label">Win Rate</div>
-            </div>
-        </div>
-    `;
+  try {
+    // Get team statistics from database
+    const teamStats = await window.DatabaseService.getTeamStatisticsOptimized(
+      team.id
+    );
+    console.log("Team stats for modal:", teamStats);
 
-  // Show the modal
-  modal.classList.add("modal--active");
+    // Get league name from team data
+    const leagueName = team.leagues?.league_name || "Unknown League";
+
+    // Generate team modal content HTML
+    modalContent.innerHTML = `
+          <div class="modal__header">
+              <h2 class="modal__title">Team Details</h2>
+              <button class="modal__close" onclick="closeTeamModal()">&times;</button>
+          </div>
+          <div class="modal__player-info">
+              <div class="modal__player-face">🏐</div>
+              <div class="modal__player-details">
+                  <h3 class="modal__player-name">${
+                    team.team_name || "Unknown Team"
+                  }</h3>
+                  <div class="player-card__position" data-position="Team">Professional Team</div>
+              </div>
+          </div>
+          <div class="modal__player-meta">
+              <div class="modal__meta-item">
+                  <div class="modal__meta-label">League</div>
+                  <div class="modal__meta-value">${leagueName}</div>
+              </div>
+              <div class="modal__meta-item">
+                  <div class="modal__meta-label">Budget</div>
+                  <div class="modal__meta-value">$${
+                    team.team_money
+                      ? Number(team.team_money).toLocaleString()
+                      : "N/A"
+                  }</div>
+              </div>
+              <div class="modal__meta-item">
+                  <div class="modal__meta-label">Squad Size</div>
+                  <div class="modal__meta-value">${
+                    teamStats.squadSize || 0
+                  }</div>
+              </div>
+              <div class="modal__meta-item">
+                  <div class="modal__meta-label">Average Rating</div>
+                  <div class="modal__meta-value modal__meta-value--highlight">${
+                    teamStats.averageRating || "N/A"
+                  }</div>
+              </div>
+          </div>
+          <div class="modal__stats">
+              <div class="modal__stat">
+                  <div class="modal__stat-value">${
+                    teamStats.matchesPlayed || 0
+                  }</div>
+                  <div class="modal__stat-label">Matches Played</div>
+              </div>
+              <div class="modal__stat">
+                  <div class="modal__stat-value">${teamStats.wins || 0}</div>
+                  <div class="modal__stat-label">Wins</div>
+              </div>
+              <div class="modal__stat">
+                  <div class="modal__stat-value">${teamStats.losses || 0}</div>
+                  <div class="modal__stat-label">Losses</div>
+              </div>
+              <div class="modal__stat">
+                  <div class="modal__stat-value">${teamStats.points || 0}</div>
+                  <div class="modal__stat-label">Points</div>
+              </div>
+              <div class="modal__stat">
+                  <div class="modal__stat-value">${
+                    teamStats.winRate || 0
+                  }%</div>
+                  <div class="modal__stat-label">Win Rate</div>
+              </div>
+              <div class="modal__stat">
+                  <div class="modal__stat-value">${
+                    teamStats.averageRating || "N/A"
+                  }</div>
+                  <div class="modal__stat-label">Avg Rating</div>
+              </div>
+          </div>
+      `;
+
+    // Show the modal
+    modal.classList.add("modal--active");
+  } catch (error) {
+    console.error("Error loading team statistics for modal:", error);
+
+    // Show basic team info even if stats fail to load
+    modalContent.innerHTML = `
+          <div class="modal__header">
+              <h2 class="modal__title">Team Details</h2>
+              <button class="modal__close" onclick="closeTeamModal()">&times;</button>
+          </div>
+          <div class="modal__player-info">
+              <div class="modal__player-face">🏐</div>
+              <div class="modal__player-details">
+                  <h3 class="modal__player-name">${
+                    team.team_name || "Unknown Team"
+                  }</h3>
+                  <div class="player-card__position" data-position="Team">Professional Team</div>
+              </div>
+          </div>
+          <div class="modal__player-meta">
+              <div class="modal__meta-item">
+                  <div class="modal__meta-label">League</div>
+                  <div class="modal__meta-value">${
+                    team.leagues?.league_name || "Unknown League"
+                  }</div>
+              </div>
+              <div class="modal__meta-item">
+                  <div class="modal__meta-label">Budget</div>
+                  <div class="modal__meta-value">$${
+                    team.team_money
+                      ? Number(team.team_money).toLocaleString()
+                      : "N/A"
+                  }</div>
+              </div>
+          </div>
+          <div class="modal__stats">
+              <div class="modal__stat">
+                  <div class="modal__stat-value">N/A</div>
+                  <div class="modal__stat-label">Statistics</div>
+              </div>
+              <div class="modal__stat">
+                  <div class="modal__stat-value">N/A</div>
+                  <div class="modal__stat-label">Not Available</div>
+              </div>
+          </div>
+      `;
+
+    // Show the modal
+    modal.classList.add("modal--active");
+  }
 }
 
 /**

@@ -51,21 +51,6 @@
         <!-- Sidebar header section -->
         <div class="sidebar__header">
           <h1 class="sidebar__title">Spike Dynasty</h1>
-
-          <!-- User info section -->
-          <div
-            class="sidebar__user-info"
-            data-auth-required
-            style="display: none"
-          >
-            <div class="user-info">
-              <div class="user-info__name" data-user-info="displayName"></div>
-              <div class="user-info__team" data-user-info="teamName"></div>
-            </div>
-            <button class="btn btn--small btn--secondary" id="logoutBtn">
-              Logout
-            </button>
-          </div>
         </div>
 
         <!-- Navigation menu items -->
@@ -112,6 +97,26 @@
             data-auth-required
             >Match Simulation</a
           >
+        </div>
+
+        <!-- User info section at bottom -->
+        <div
+          class="sidebar__user-info"
+          data-auth-required
+          style="display: none"
+        >
+          <div class="user-info-container">
+            <div class="user-info">
+              <div class="user-info__name" data-user-info="displayName"></div>
+              <div class="user-info__team" data-user-info="teamName"></div>
+            </div>
+            <button
+              class="btn btn--small btn--secondary user-info__logout"
+              id="logoutBtn"
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -216,32 +221,32 @@
                 <div class="team-stats-section__grid">
                   <div class="stat-card">
                     <div class="stat-card__icon">🏆</div>
-                    <div class="stat-card__value">12</div>
+                    <div class="stat-card__value" id="teamWins">-</div>
                     <div class="stat-card__label">Wins</div>
                   </div>
                   <div class="stat-card">
                     <div class="stat-card__icon">❌</div>
-                    <div class="stat-card__value">3</div>
+                    <div class="stat-card__value" id="teamLosses">-</div>
                     <div class="stat-card__label">Losses</div>
                   </div>
                   <div class="stat-card">
                     <div class="stat-card__icon">👥</div>
-                    <div class="stat-card__value">15</div>
+                    <div class="stat-card__value" id="teamSquadSize">-</div>
                     <div class="stat-card__label">Squad Size</div>
                   </div>
                   <div class="stat-card">
                     <div class="stat-card__icon">📊</div>
-                    <div class="stat-card__value">80%</div>
+                    <div class="stat-card__value" id="teamWinRate">-</div>
                     <div class="stat-card__label">Win Rate</div>
                   </div>
                   <div class="stat-card">
                     <div class="stat-card__icon">⚡</div>
-                    <div class="stat-card__value">4.2</div>
+                    <div class="stat-card__value" id="teamAvgRating">-</div>
                     <div class="stat-card__label">Avg Rating</div>
                   </div>
                   <div class="stat-card">
                     <div class="stat-card__icon">💰</div>
-                    <div class="stat-card__value">$2.1M</div>
+                    <div class="stat-card__value" id="teamBudget">-</div>
                     <div class="stat-card__label">Budget</div>
                   </div>
                 </div>
@@ -432,6 +437,55 @@
             <!-- Available Players Section (Left Side) -->
             <div class="available-players-modern">
               <h2 class="available-players-modern__title">Available Players</h2>
+
+              <!-- Player Filter Controls -->
+              <div class="squad-filter-controls">
+                <!-- Search functionality -->
+                <div class="squad-filter-search">
+                  <div class="squad-filter-search__icon">🔍</div>
+                  <input
+                    type="text"
+                    class="squad-filter-search__input"
+                    placeholder="Search players..."
+                    id="squadPlayerSearch"
+                  />
+                </div>
+
+                <!-- Position filter buttons -->
+                <div class="squad-filter-buttons">
+                  <button
+                    class="squad-filter-button squad-filter-button--active"
+                    data-position="all"
+                  >
+                    All
+                  </button>
+                  <button
+                    class="squad-filter-button"
+                    data-position="Outside Hitter"
+                  >
+                    OH
+                  </button>
+                  <button
+                    class="squad-filter-button"
+                    data-position="Middle Blocker"
+                  >
+                    MB
+                  </button>
+                  <button class="squad-filter-button" data-position="Setter">
+                    S
+                  </button>
+                  <button class="squad-filter-button" data-position="Libero">
+                    L
+                  </button>
+                  <button
+                    class="squad-filter-button"
+                    data-position="Opposite Hitter"
+                  >
+                    OP
+                  </button>
+                </div>
+              </div>
+
               <div class="available-players-modern__grid" id="availablePlayers">
                 Available players will be generated by JavaScript
               </div>

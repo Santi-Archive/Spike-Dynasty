@@ -27,18 +27,28 @@ const Standings = {
    * This function sets up the standings page by generating the league tables
    * and setting up interactive elements.
    *
-   * @returns {void}
+   * @returns {Promise<void>}
    */
-  initialize() {
+  async initialize() {
     try {
       console.log("Initializing Standings component...");
 
+      // Show loading screen for standings
+      window.DOMHelpers.showComponentLoading("Standings", 0);
+
       // Generate the standings tables
-      this.generateStandings();
+      await this.generateStandings();
 
       console.log("Standings component initialized successfully");
+
+      // Hide loading screen after successful initialization
+      window.DOMHelpers.hideLoadingScreen();
     } catch (error) {
       console.error("Error initializing Standings:", error);
+      // Hide loading screen on error
+      window.DOMHelpers.hideLoadingScreen();
+      // Show error notification
+      window.DOMHelpers.showNotification("Error loading standings", "error");
       throw error;
     }
   },
@@ -47,11 +57,11 @@ const Standings = {
    * Generate and display league standings
    *
    * This function creates the HTML for all league standings tables
-   * and populates them with team data.
+   * and populates them with team data from the database.
    *
-   * @returns {void}
+   * @returns {Promise<void>}
    */
-  generateStandings() {
+  async generateStandings() {
     const standingsContent = document.getElementById("standingsContent");
     if (!standingsContent) {
       console.error("Standings content element not found");
@@ -59,9 +69,46 @@ const Standings = {
     }
 
     try {
-      // Get teams data and organize by league
-      const teamsData = window.DataStorage.getTeamsData();
-      const leagues = this.organizeTeamsByLeague(teamsData);
+      // Update loading progress - checking database service
+      window.DOMHelpers.updateLoadingMessage("Connecting to database...");
+      window.DOMHelpers.updateLoadingProgress(20);
+
+      // Show loading state
+      standingsContent.innerHTML =
+        '<div class="loading-placeholder">Loading standings...</div>';
+
+      // Check if DatabaseService is available
+      if (!window.DatabaseService || !window.DatabaseService.isInitialized) {
+        throw new Error("Database service not available");
+      }
+
+      // Update loading progress - fetching data
+      window.DOMHelpers.updateLoadingMessage("Fetching standings data...");
+      window.DOMHelpers.updateLoadingProgress(40);
+
+      // Get standings data from database
+      const standingsData = await window.DatabaseService.getStandings();
+
+      console.log("Standings data from database:", standingsData);
+
+      if (!standingsData || standingsData.length === 0) {
+        standingsContent.innerHTML =
+          '<div class="no-players">No standings data available.</div>';
+        return;
+      }
+
+      // Update loading progress - organizing data
+      window.DOMHelpers.updateLoadingMessage("Organizing league standings...");
+      window.DOMHelpers.updateLoadingProgress(60);
+
+      // Organize standings by league
+      const leagues = this.organizeStandingsByLeague(standingsData);
+
+      console.log("Organized leagues:", leagues);
+
+      // Update loading progress - generating HTML
+      window.DOMHelpers.updateLoadingMessage("Generating standings tables...");
+      window.DOMHelpers.updateLoadingProgress(80);
 
       // Generate HTML for all leagues
       let standingsHTML = "";
@@ -79,19 +126,67 @@ const Standings = {
 
       standingsContent.innerHTML = standingsHTML;
 
+      console.log("Generated standings HTML:", standingsHTML);
+
+      // Update loading progress - setting up interactions
+      window.DOMHelpers.updateLoadingMessage("Setting up team interactions...");
+      window.DOMHelpers.updateLoadingProgress(90);
+
       // Attach click handlers to team rows
       this.attachTeamClickHandlers();
 
-      console.log("Standings generated successfully");
+      // Update loading progress - complete
+      window.DOMHelpers.updateLoadingMessage("Standings ready!");
+      window.DOMHelpers.updateLoadingProgress(100);
+
+      console.log("Standings generated successfully from database");
     } catch (error) {
       console.error("Error generating standings:", error);
       standingsContent.innerHTML =
         '<div class="error-message">Error loading standings. Please try again.</div>';
+      throw error;
     }
   },
 
   /**
-   * Organize teams by league
+   * Organize standings by league
+   *
+   * This function groups standings data by league name.
+   *
+   * @param {Array} standingsData - Array of standings data from database
+   * @returns {Object} - Standings organized by league
+   */
+  organizeStandingsByLeague(standingsData) {
+    const leagues = {};
+
+    standingsData.forEach((team) => {
+      const leagueName = team.league_name;
+      if (!leagues[leagueName]) {
+        leagues[leagueName] = [];
+      }
+      leagues[leagueName].push(team);
+    });
+
+    // Teams are already sorted by the database query, but ensure proper ordering
+    Object.keys(leagues).forEach((league) => {
+      leagues[league].sort((a, b) => {
+        // Primary sort: points (descending)
+        if (b.points !== a.points) return b.points - a.points;
+        // Secondary sort: wins (descending)
+        if (b.wins !== a.wins) return b.wins - a.wins;
+        // Tertiary sort: win percentage (descending)
+        if (b.win_percentage !== a.win_percentage)
+          return b.win_percentage - a.win_percentage;
+        // Final sort: team name (ascending)
+        return a.team_name.localeCompare(b.team_name);
+      });
+    });
+
+    return leagues;
+  },
+
+  /**
+   * Organize teams by league (legacy method for backward compatibility)
    *
    * This function groups teams by their league and sorts them by points.
    *
@@ -154,18 +249,22 @@ const Standings = {
    *
    * This function creates the HTML for a single team's row in the standings.
    *
-   * @param {Object} team - Team object
+   * @param {Object} team - Team standings object from database
    * @param {number} position - Team's position in the standings
    * @returns {string} - HTML string for the team row
    */
   generateTeamRow(team, position) {
     return `
-            <div class="standings-table__row" data-team="${team.name}">
+            <div class="standings-table__row" data-team="${
+              team.team_name
+            }" data-team-id="${team.team_id}">
                 <div class="standings-table__pos">${position}</div>
-                <div class="standings-table__team">${team.name}</div>
-                <div class="standings-table__played">${team.played || 0}</div>
-                <div class="standings-table__won">${team.won || 0}</div>
-                <div class="standings-table__lost">${team.lost || 0}</div>
+                <div class="standings-table__team">${team.team_name}</div>
+                <div class="standings-table__played">${
+                  team.matches_played || 0
+                }</div>
+                <div class="standings-table__won">${team.wins || 0}</div>
+                <div class="standings-table__lost">${team.losses || 0}</div>
                 <div class="standings-table__points">${team.points || 0}</div>
             </div>
         `;
@@ -181,11 +280,24 @@ const Standings = {
    */
   attachTeamClickHandlers() {
     document.querySelectorAll(".standings-table__row").forEach((row) => {
-      row.addEventListener("click", () => {
+      row.addEventListener("click", async () => {
+        const teamId = row.getAttribute("data-team-id");
         const teamName = row.getAttribute("data-team");
-        const team = window.DataStorage.getTeam(teamName);
-        if (team) {
-          this.showTeamDetails(team);
+
+        try {
+          // Get team details from database
+          const team = await window.DatabaseService.getTeamById(teamId);
+          if (team) {
+            await this.showTeamDetails(team);
+          } else {
+            console.warn(`Team not found: ${teamName}`);
+          }
+        } catch (error) {
+          console.error("Error fetching team details:", error);
+          window.DOMHelpers.showNotification(
+            "Error loading team details",
+            "error"
+          );
         }
       });
     });
@@ -197,11 +309,11 @@ const Standings = {
    * This function displays detailed team information in a modal dialog.
    *
    * @param {Object} team - Team object to display
-   * @returns {void}
+   * @returns {Promise<void>}
    */
-  showTeamDetails(team) {
+  async showTeamDetails(team) {
     try {
-      window.ModalHelpers.showTeamModal(team);
+      await window.ModalHelpers.showTeamModal(team);
     } catch (error) {
       console.error("Error showing team details:", error);
       window.DOMHelpers.showNotification("Error showing team details", "error");
@@ -383,12 +495,16 @@ const Standings = {
    *
    * This function returns the current standings data organized by league.
    *
-   * @returns {Object} - Current standings data
+   * @returns {Promise<Object>} - Current standings data
    */
-  getCurrentStandings() {
+  async getCurrentStandings() {
     try {
-      const teamsData = window.DataStorage.getTeamsData();
-      return this.organizeTeamsByLeague(teamsData);
+      if (!window.DatabaseService || !window.DatabaseService.isInitialized) {
+        throw new Error("Database service not available");
+      }
+
+      const standingsData = await window.DatabaseService.getStandings();
+      return this.organizeStandingsByLeague(standingsData);
     } catch (error) {
       console.error("Error getting current standings:", error);
       return {};

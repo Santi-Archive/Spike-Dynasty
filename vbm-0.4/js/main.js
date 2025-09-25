@@ -81,7 +81,7 @@ const VBManager = {
       loadingManager.nextStep("Preparing user interface...");
       if (window.AuthService.isAuthenticated()) {
         console.log("User is already authenticated, loading dashboard");
-        this.initializePage("dashboard");
+        await this.initializePage("dashboard");
       } else {
         console.log("User not authenticated, showing authentication modal");
         window.UserManagement.showAuthModal();
@@ -363,15 +363,17 @@ const VBManager = {
    * the page ID, ensuring each page is properly set up when accessed.
    *
    * @param {string} pageId - ID of the page to initialize
-   * @returns {void}
+   * @returns {Promise<void>}
    */
-  initializePage(pageId) {
+  async initializePage(pageId) {
     try {
       console.log(`Initializing page: ${pageId}`);
 
       switch (pageId) {
         case "dashboard":
-          window.Dashboard.initialize();
+          await window.Dashboard.initialize();
+          // Load team statistics only when dashboard is shown (lazy loading)
+          await window.Dashboard.showDashboard();
           break;
         case "team-management":
           window.TeamManagement.initialize();
@@ -380,7 +382,7 @@ const VBManager = {
           window.SquadSelection.initialize();
           break;
         case "standings":
-          window.Standings.initialize();
+          await window.Standings.initialize();
           break;
         case "transfer-market":
           window.TransferMarket.initialize();
@@ -514,7 +516,7 @@ const VBManager = {
       await this.loadApplicationData();
 
       // Reinitialize current page to refresh data
-      this.initializePage(this.currentPage);
+      await this.initializePage(this.currentPage);
 
       window.DOMHelpers.showNotification(
         "Application data reloaded successfully",
@@ -603,6 +605,24 @@ function closeTeamModal() {
   window.ModalHelpers.closeTeamModal();
 }
 
+/**
+ * Refresh team statistics on dashboard
+ *
+ * This function can be called from other components to refresh
+ * the team statistics display after changes.
+ *
+ * @returns {Promise<void>}
+ */
+async function refreshTeamStatistics() {
+  try {
+    if (window.Dashboard && window.Dashboard.refreshTeamStatistics) {
+      await window.Dashboard.refreshTeamStatistics();
+    }
+  } catch (error) {
+    console.error("Error refreshing team statistics:", error);
+  }
+}
+
 // Initialize the application when DOM is ready
 document.addEventListener("DOMContentLoaded", async () => {
   try {
@@ -626,6 +646,9 @@ window.debug = {
   getState: () => VBManager.getState(),
   reset: () => VBManager.reset(),
   reloadData: () => VBManager.reloadData(),
+  refreshTeamStats: () => refreshTeamStatistics(),
+  clearCache: (key) => window.DatabaseService?.clearCache(key),
+  clearAllCache: () => window.DatabaseService?.clearCache(),
   showError: (message) => window.DOMHelpers.showNotification(message, "error"),
   showSuccess: (message) =>
     window.DOMHelpers.showNotification(message, "success"),

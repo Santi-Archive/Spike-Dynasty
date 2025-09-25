@@ -49,9 +49,9 @@ const Dashboard = {
    * This function sets up the dashboard by generating the calendar
    * and preparing all interactive elements.
    *
-   * @returns {void}
+   * @returns {Promise<void>}
    */
-  initialize() {
+  async initialize() {
     try {
       // Prevent double initialization
       if (this.isInitialized) {
@@ -66,6 +66,9 @@ const Dashboard = {
 
       // Set up any additional dashboard-specific functionality
       this.setupDashboardFeatures();
+
+      // Note: Team statistics will be loaded lazily when dashboard is shown
+      // This improves initial page load performance
 
       this.isInitialized = true;
       console.log("Dashboard component initialized successfully");
@@ -87,6 +90,162 @@ const Dashboard = {
     // Add any additional dashboard setup here
     // For example, setting up event listeners for dashboard-specific elements
     console.log("Dashboard features setup complete");
+  },
+
+  /**
+   * Load and display team statistics from the database
+   *
+   * This function fetches the user's team statistics from the database
+   * and updates the dashboard display with real data.
+   *
+   * @returns {Promise<void>}
+   */
+  async loadTeamStatistics() {
+    try {
+      console.log("Loading team statistics...");
+
+      // Check if user is authenticated and has a team
+      if (!window.AuthService || !window.AuthService.isAuthenticated()) {
+        console.log("User not authenticated, skipping team statistics");
+        return;
+      }
+
+      const userTeam = window.AuthService.getUserTeam();
+      if (!userTeam) {
+        console.log("No user team found, skipping team statistics");
+        return;
+      }
+
+      // Fetch team statistics from database
+      const stats = await window.DatabaseService.getUserTeamStatistics();
+
+      console.log("Dashboard received team statistics:", stats);
+
+      // Update the dashboard with real data
+      this.updateTeamStatisticsDisplay(stats);
+
+      console.log("Team statistics loaded successfully:", stats);
+    } catch (error) {
+      console.error("Error loading team statistics:", error);
+      // Set default values on error
+      this.updateTeamStatisticsDisplay({
+        wins: 0,
+        losses: 0,
+        squadSize: 0,
+        winRate: 0,
+        averageRating: 0,
+        budget: 0,
+      });
+    }
+  },
+
+  /**
+   * Update the team statistics display with real data
+   *
+   * This function updates the HTML elements with the fetched team statistics.
+   *
+   * @param {Object} stats - Team statistics object
+   * @returns {void}
+   */
+  updateTeamStatisticsDisplay(stats) {
+    try {
+      console.log("Updating team statistics display with:", stats);
+
+      // Update wins
+      const winsElement = document.getElementById("teamWins");
+      if (winsElement) {
+        winsElement.textContent = stats.wins || 0;
+        console.log(`Set wins to: ${stats.wins || 0}`);
+      }
+
+      // Update losses
+      const lossesElement = document.getElementById("teamLosses");
+      if (lossesElement) {
+        lossesElement.textContent = stats.losses || 0;
+        console.log(`Set losses to: ${stats.losses || 0}`);
+      }
+
+      // Update squad size
+      const squadSizeElement = document.getElementById("teamSquadSize");
+      if (squadSizeElement) {
+        squadSizeElement.textContent = stats.squadSize || 0;
+      }
+
+      // Update win rate
+      const winRateElement = document.getElementById("teamWinRate");
+      if (winRateElement) {
+        winRateElement.textContent = `${stats.winRate || 0}%`;
+      }
+
+      // Update average rating
+      const avgRatingElement = document.getElementById("teamAvgRating");
+      if (avgRatingElement) {
+        avgRatingElement.textContent = stats.averageRating || 0;
+      }
+
+      // Update budget (format as currency)
+      const budgetElement = document.getElementById("teamBudget");
+      if (budgetElement) {
+        const budget = stats.budget || 0;
+        if (budget >= 1000000) {
+          budgetElement.textContent = `$${(budget / 1000000).toFixed(1)}M`;
+        } else if (budget >= 1000) {
+          budgetElement.textContent = `$${(budget / 1000).toFixed(0)}K`;
+        } else {
+          budgetElement.textContent = `$${budget.toFixed(0)}`;
+        }
+      }
+
+      console.log("Team statistics display updated successfully");
+    } catch (error) {
+      console.error("Error updating team statistics display:", error);
+    }
+  },
+
+  /**
+   * Show dashboard and load statistics (LAZY LOADING)
+   *
+   * This function is called when the dashboard page is shown.
+   * It loads team statistics only when needed for better performance.
+   *
+   * @returns {Promise<void>}
+   */
+  async showDashboard() {
+    try {
+      console.log("Showing dashboard, loading team statistics...");
+
+      // Load team statistics when dashboard is actually shown
+      await this.loadTeamStatistics();
+
+      // Update calendar if needed
+      this.updateDayIndicator();
+    } catch (error) {
+      console.error("Error showing dashboard:", error);
+    }
+  },
+
+  /**
+   * Refresh team statistics
+   *
+   * This function reloads and updates the team statistics display.
+   * Useful to call after matches, transfers, or other team changes.
+   *
+   * @returns {Promise<void>}
+   */
+  async refreshTeamStatistics() {
+    try {
+      console.log("Refreshing team statistics...");
+
+      // Clear cache for this team's data
+      const userTeam = window.AuthService?.getUserTeam();
+      if (userTeam) {
+        window.DatabaseService?.invalidateTeamCache(userTeam.id);
+      }
+
+      await this.loadTeamStatistics();
+    } catch (error) {
+      console.error("Error refreshing team statistics:", error);
+    }
   },
 
   /**

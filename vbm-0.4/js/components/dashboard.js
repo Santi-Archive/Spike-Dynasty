@@ -252,29 +252,43 @@ const Dashboard = {
    * Update season progress and match simulation visibility
    *
    * This function updates the season progress display and shows/hides
-   * the match simulation section based on whether today is a match day.
+   * the appropriate content in the match simulation section based on whether today is a match day.
    *
    * @returns {void}
    */
   updateSeasonProgress() {
     const progressContainer = document.querySelector(".season-progress");
     const matchSimulation = document.getElementById("matchSimulation");
+    const matchContent = document.getElementById("matchContent");
+    const trainingContent = document.getElementById("trainingContent");
 
     if (this.isMatchDay(this.currentDay)) {
-      // Show match simulation on match days
+      // Show match content on match days
       if (progressContainer) {
         progressContainer.style.marginTop = "2rem";
       }
       if (matchSimulation) {
         matchSimulation.style.display = "block";
       }
+      if (matchContent) {
+        matchContent.style.display = "block";
+      }
+      if (trainingContent) {
+        trainingContent.style.display = "none";
+      }
     } else {
-      // Hide match simulation on non-match days
+      // Show training content on non-match days
       if (progressContainer) {
-        progressContainer.style.marginTop = "0";
+        progressContainer.style.marginTop = "2rem";
       }
       if (matchSimulation) {
-        matchSimulation.style.display = "none";
+        matchSimulation.style.display = "block";
+      }
+      if (matchContent) {
+        matchContent.style.display = "none";
+      }
+      if (trainingContent) {
+        trainingContent.style.display = "block";
       }
     }
   },

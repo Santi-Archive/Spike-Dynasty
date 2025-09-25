@@ -1,20 +1,14 @@
 /**
- * Team Management Component - Handles team roster display and player management
+ * Team Management Component - Enhanced UI with Vercel-inspired design
  *
- * This component manages the team roster display, player information,
- * and various team management operations like filtering, sorting, and searching.
+ * This component manages the team roster display with improved UX,
+ * modern styling, and enhanced filtering/search capabilities.
  *
- * @fileoverview Team management component with player roster functionality
+ * @fileoverview Enhanced team management component
  * @author Spike Dynasty Team
- * @version 0.2.0
+ * @version 0.3.0
  */
 
-/**
- * TeamManagement component object
- *
- * This object contains all functionality for managing the team roster,
- * including displaying players, filtering, sorting, and player interactions.
- */
 const TeamManagement = {
   // Component state
   currentFilter: "all",
@@ -23,18 +17,14 @@ const TeamManagement = {
   searchTerm: "",
   isInitialized: false,
   isGeneratingGrid: false,
+  allPlayers: [],
+  filteredPlayers: [],
 
   /**
    * Initialize the team management component
-   *
-   * This function sets up the team management page by generating
-   * the player grid and setting up any necessary event listeners.
-   *
-   * @returns {Promise<void>}
    */
   async initialize() {
     try {
-      // Prevent double initialization
       if (this.isInitialized) {
         console.log(
           "Team Management component already initialized, skipping..."
@@ -42,16 +32,18 @@ const TeamManagement = {
         return;
       }
 
-      console.log("Initializing Team Management component...");
+      console.log("Initializing Enhanced Team Management component...");
 
       // Generate the team grid with all players
       await this.generateTeamGrid();
 
-      // Set up any additional team management features
-      this.setupTeamManagementFeatures();
+      // Set up enhanced team management features
+      this.setupEnhancedFeatures();
 
       this.isInitialized = true;
-      console.log("Team Management component initialized successfully");
+      console.log(
+        "Enhanced Team Management component initialized successfully"
+      );
     } catch (error) {
       console.error("Error initializing Team Management:", error);
       throw error;
@@ -59,36 +51,53 @@ const TeamManagement = {
   },
 
   /**
-   * Setup additional team management features
-   *
-   * This function sets up any additional features specific to team management
-   * that aren't part of the core player grid functionality.
-   *
-   * @returns {void}
+   * Setup enhanced team management features
    */
-  setupTeamManagementFeatures() {
-    // Add any additional team management setup here
-    // For example, setting up search, filter, or sort controls
-    console.log("Team Management features setup complete");
+  setupEnhancedFeatures() {
+    const searchInput = document.getElementById("playerSearch");
+    if (searchInput) {
+      searchInput.addEventListener("input", (e) => {
+        this.searchTerm = e.target.value;
+        this.applyFiltersAndSearch();
+      });
+    }
+
+    const filterButtons = document.querySelectorAll(".filter-button");
+    filterButtons.forEach((button) => {
+      button.addEventListener("click", (e) => {
+        // Remove active class from all buttons
+        filterButtons.forEach((btn) =>
+          btn.classList.remove("filter-button--active")
+        );
+        // Add active class to clicked button
+        e.target.classList.add("filter-button--active");
+
+        this.currentFilter = e.target.dataset.position;
+        this.applyFiltersAndSearch();
+      });
+    });
+
+    const sortButton = document.getElementById("sortButton");
+    if (sortButton) {
+      sortButton.addEventListener("click", () => {
+        this.toggleSort();
+      });
+    }
+
+    console.log("Enhanced Team Management features setup complete");
   },
 
   /**
-   * Generate and display the team grid with player cards
-   *
-   * This function creates the player grid display by fetching all players
-   * from the database service and creating individual player cards for each one.
-   *
-   * @returns {Promise<void>}
+   * Generate and display the team grid with enhanced player cards
    */
   async generateTeamGrid() {
-    // Prevent multiple simultaneous calls
     if (this.isGeneratingGrid) {
       console.log("DEBUG: generateTeamGrid already in progress, skipping...");
       return;
     }
 
     this.isGeneratingGrid = true;
-    console.log("DEBUG: Starting generateTeamGrid()");
+    console.log("DEBUG: Starting enhanced generateTeamGrid()");
 
     const teamGrid = document.getElementById("teamGrid");
     if (!teamGrid) {
@@ -98,7 +107,7 @@ const TeamManagement = {
     }
 
     try {
-      // Show loading state for team grid
+      // Show loading state
       window.DOMHelpers.showComponentLoading("Team Roster", 0);
 
       // Clear existing content
@@ -111,38 +120,33 @@ const TeamManagement = {
       console.log("DEBUG: Raw players from database:", players);
       console.log("DEBUG: Number of players from database:", players.length);
 
+      // Store all players for filtering
+      this.allPlayers = players;
+      this.filteredPlayers = [...players];
+
       if (players.length === 0) {
         teamGrid.innerHTML =
-          '<div class="no-players">No players found in the team.</div>';
+          '<div class="no-players">No players found in the team roster.</div>';
         window.DOMHelpers.hideLoadingScreen();
         return;
       }
 
+      this.updateStatsDisplay();
+
       // Update loading progress
-      window.DOMHelpers.updateLoadingMessage("Creating player cards...");
+      window.DOMHelpers.updateLoadingMessage(
+        "Creating enhanced player cards..."
+      );
       window.DOMHelpers.updateLoadingProgress(50);
 
-      // Create player cards for each player
-      players.forEach((player, index) => {
-        console.log(
-          `DEBUG: Creating card ${index} for player:`,
-          player.player_name,
-          "ID:",
-          player.id
-        );
-        const playerCard = this.createPlayerCard(player, index);
-        teamGrid.appendChild(playerCard);
-      });
+      // Create enhanced player cards
+      this.renderPlayerCards(players);
 
       // Update loading progress
       window.DOMHelpers.updateLoadingMessage("Finalizing team roster...");
       window.DOMHelpers.updateLoadingProgress(100);
 
-      console.log(`Generated ${players.length} player cards`);
-      console.log(
-        "DEBUG: Final teamGrid children count:",
-        teamGrid.children.length
-      );
+      console.log(`Generated ${players.length} enhanced player cards`);
 
       // Hide loading screen after a brief delay
       setTimeout(() => {
@@ -155,81 +159,63 @@ const TeamManagement = {
       window.DOMHelpers.hideLoadingScreen();
     } finally {
       this.isGeneratingGrid = false;
-      console.log("DEBUG: Finished generateTeamGrid()");
+      console.log("DEBUG: Finished enhanced generateTeamGrid()");
     }
   },
 
   /**
-   * Create a single player card element
-   *
-   * This function creates the HTML element for a single player card
-   * with all necessary information and event listeners.
-   *
-   * @param {Object} player - Player object
-   * @param {number} index - Player index in the array
-   * @returns {HTMLElement} - Player card element
+   * Create enhanced player card element
    */
-  createPlayerCard(player, index) {
+  createEnhancedPlayerCard(player, index) {
     const playerCard = document.createElement("div");
     playerCard.className = "player-card";
 
-    // Set up player card HTML structure
+    const initials = this.getPlayerInitials(
+      player.player_name || "Unknown Player"
+    );
+
     playerCard.innerHTML = `
-            <div class="player-card__header">
-                <div class="player-card__info">
-                    <div class="player-card__face">👤</div>
-                    <div class="player-card__details">
-                        <div class="player-card__name">${
-                          player.player_name || "Unknown Player"
-                        }</div>
-                        <div class="player-card__position" data-position="${
-                          player.position || "Unknown"
-                        }">${player.position || "Unknown Position"}</div>
-                    </div>
-                </div>
-                <div class="player-card__overall player-card__overall--large">${
-                  player.overall || "N/A"
-                }</div>
-            </div>
-            <div class="player-card__stats">
-                <div class="player-card__stat">
-                    <div class="player-card__stat-value">${
-                      player.attack || "N/A"
-                    }</div>
-                    <div class="player-card__stat-label">ATT</div>
-                </div>
-                <div class="player-card__stat">
-                    <div class="player-card__stat-value">${
-                      player.defense || "N/A"
-                    }</div>
-                    <div class="player-card__stat-label">DEF</div>
-                </div>
-                <div class="player-card__stat">
-                    <div class="player-card__stat-value">${
-                      player.serve || "N/A"
-                    }</div>
-                    <div class="player-card__stat-label">SRV</div>
-                </div>
-                <div class="player-card__stat">
-                    <div class="player-card__stat-value">${
-                      player.block || "N/A"
-                    }</div>
-                    <div class="player-card__stat-label">BLK</div>
-                </div>
-                <div class="player-card__stat">
-                    <div class="player-card__stat-value">${
-                      player.receive || "N/A"
-                    }</div>
-                    <div class="player-card__stat-label">RCV</div>
-                </div>
-                <div class="player-card__stat">
-                    <div class="player-card__stat-value">${
-                      player.setting || "N/A"
-                    }</div>
-                    <div class="player-card__stat-label">SET</div>
-                </div>
-            </div>
-        `;
+      <div class="player-card__header">
+        <div class="player-card__info">
+          <div class="player-card__avatar">${initials}</div>
+          <div class="player-card__details">
+            <div class="player-card__name">${
+              player.player_name || "Unknown Player"
+            }</div>
+            <div class="player-card__position" data-position="${
+              player.position || "Unknown"
+            }">${player.position || "Unknown Position"}</div>
+          </div>
+        </div>
+        <div class="player-card__overall">${player.overall || "N/A"}</div>
+      </div>
+      <div class="player-card__stats">
+        <div class="player-card__stat">
+          <div class="player-card__stat-value">${player.attack || "N/A"}</div>
+          <div class="player-card__stat-label">ATT</div>
+        </div>
+        <div class="player-card__stat">
+          <div class="player-card__stat-value">${player.defense || "N/A"}</div>
+          <div class="player-card__stat-label">DEF</div>
+        </div>
+        <div class="player-card__stat">
+          <div class="player-card__stat-value">${player.serve || "N/A"}</div>
+          <div class="player-card__stat-label">SRV</div>
+        </div>
+        <div class="player-card__stat">
+          <div class="player-card__stat-value">${player.block || "N/A"}</div>
+          <div class="player-card__stat-label">BLK</div>
+        </div>
+        <div class="player-card__stat">
+          <div class="player-card__stat-value">${player.receive || "N/A"}</div>
+          <div class="player-card__stat-label">RCV</div>
+        </div>
+        <div class="player-card__stat">
+          <div class="player-card__stat-value">${player.setting || "N/A"}</div>
+          <div class="player-card__stat-label">SET</div>
+        </div>
+      </div>
+    `;
 
     // Add click event listener to show player details
     playerCard.addEventListener("click", () => {
@@ -237,6 +223,41 @@ const TeamManagement = {
     });
 
     return playerCard;
+  },
+
+  /**
+   * Get player initials for avatar
+   */
+  getPlayerInitials(name) {
+    return name
+      .split(" ")
+      .map((word) => word.charAt(0))
+      .join("")
+      .toUpperCase()
+      .substring(0, 2);
+  },
+
+  /**
+   * Render player cards to the grid
+   */
+  renderPlayerCards(players) {
+    const teamGrid = document.getElementById("teamGrid");
+    if (!teamGrid) return;
+
+    // Clear existing content
+    teamGrid.innerHTML = "";
+
+    if (players.length === 0) {
+      teamGrid.innerHTML =
+        '<div class="no-players">No players match your current filters.</div>';
+      return;
+    }
+
+    // Create enhanced player cards
+    players.forEach((player, index) => {
+      const playerCard = this.createEnhancedPlayerCard(player, index);
+      teamGrid.appendChild(playerCard);
+    });
   },
 
   /**
@@ -260,133 +281,100 @@ const TeamManagement = {
   },
 
   /**
-   * Filter players by position
-   *
-   * This function filters the displayed players based on their position
-   * and updates the team grid accordingly.
-   *
-   * @param {string} position - Position to filter by (empty string shows all)
-   * @returns {Promise<void>}
+   * Apply filters and search
    */
-  async filterByPosition(position) {
-    try {
-      this.currentFilter = position;
+  applyFiltersAndSearch() {
+    let filtered = [...this.allPlayers];
 
-      // Get filtered players from database service
-      const filteredPlayers =
-        await window.DatabaseService.filterPlayersByPosition(position);
-
-      // Display filtered players
-      this.displayFilteredPlayers(filteredPlayers);
-
-      console.log(
-        `Filtered players by position: ${position}, found ${filteredPlayers.length} players`
+    if (this.currentFilter !== "all") {
+      filtered = filtered.filter(
+        (player) => player.position === this.currentFilter
       );
-    } catch (error) {
-      console.error("Error filtering players by position:", error);
-      window.DOMHelpers.showNotification("Error filtering players", "error");
     }
+
+    if (this.searchTerm.trim()) {
+      const searchLower = this.searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (player) =>
+          (player.player_name || "").toLowerCase().includes(searchLower) ||
+          (player.position || "").toLowerCase().includes(searchLower)
+      );
+    }
+
+    filtered = this.sortPlayers(
+      filtered,
+      this.currentSort,
+      this.currentSortDirection === "desc"
+    );
+
+    this.filteredPlayers = filtered;
+    this.renderPlayerCards(filtered);
+    this.updateStatsDisplay();
   },
 
   /**
-   * Display filtered players in the team grid
-   *
-   * This function updates the team grid to show only the filtered players.
-   *
-   * @param {Array} filteredPlayers - Array of filtered player objects
-   * @returns {void}
+   * Sort players array
    */
-  displayFilteredPlayers(filteredPlayers) {
-    const teamGrid = document.getElementById("teamGrid");
-    if (!teamGrid) {
-      console.error("Team grid element not found");
-      return;
-    }
+  sortPlayers(players, attribute, descending = true) {
+    return [...players].sort((a, b) => {
+      let aVal = a[attribute] || 0;
+      let bVal = b[attribute] || 0;
 
-    try {
-      // Clear existing content
-      teamGrid.innerHTML = "";
-
-      if (filteredPlayers.length === 0) {
-        teamGrid.innerHTML =
-          '<div class="no-players">No players found for this filter.</div>';
-        return;
+      if (attribute === "player_name") {
+        aVal = (a.player_name || "").toLowerCase();
+        bVal = (b.player_name || "").toLowerCase();
+        return descending ? bVal.localeCompare(aVal) : aVal.localeCompare(bVal);
       }
 
-      // Create player cards for filtered players
-      filteredPlayers.forEach((player, index) => {
-        const playerCard = this.createPlayerCard(player, index);
-        teamGrid.appendChild(playerCard);
-      });
-    } catch (error) {
-      console.error("Error displaying filtered players:", error);
-      teamGrid.innerHTML =
-        '<div class="error-message">Error displaying filtered players.</div>';
-    }
+      // Numeric sorting
+      aVal = Number(aVal) || 0;
+      bVal = Number(bVal) || 0;
+      return descending ? bVal - aVal : aVal - bVal;
+    });
   },
 
   /**
-   * Sort players by a specific attribute
-   *
-   * This function sorts the displayed players based on the specified attribute
-   * and direction, then updates the display.
-   *
-   * @param {string} attribute - Attribute to sort by (overall, name, age, etc.)
-   * @param {boolean} ascending - Sort direction (true for ascending, false for descending)
-   * @returns {Promise<void>}
+   * Toggle sort direction
    */
-  async sortPlayers(attribute, ascending = true) {
-    try {
-      this.currentSort = attribute;
-      this.currentSortDirection = ascending ? "asc" : "desc";
-
-      // Get sorted players from database service
-      const sortedPlayers = await window.DatabaseService.sortPlayers(
-        attribute,
-        ascending
-      );
-
-      // Display sorted players
-      this.displayFilteredPlayers(sortedPlayers);
-
-      console.log(
-        `Sorted players by ${attribute} (${
-          ascending ? "ascending" : "descending"
-        })`
-      );
-    } catch (error) {
-      console.error("Error sorting players:", error);
-      window.DOMHelpers.showNotification("Error sorting players", "error");
+  toggleSort() {
+    this.currentSortDirection =
+      this.currentSortDirection === "desc" ? "asc" : "desc";
+    const sortButton = document.getElementById("sortButton");
+    if (sortButton) {
+      const arrow = sortButton.querySelector("span:last-child");
+      arrow.textContent = this.currentSortDirection === "desc" ? "↓" : "↑";
     }
+    this.applyFiltersAndSearch();
   },
 
   /**
-   * Search players by name, position, or nationality
-   *
-   * This function searches through all players based on the provided search term
-   * and updates the display to show only matching players.
-   *
-   * @param {string} searchTerm - Search term to filter players
-   * @returns {Promise<void>}
+   * Update stats display
    */
-  async searchPlayers(searchTerm) {
-    try {
-      this.searchTerm = searchTerm;
+  updateStatsDisplay() {
+    const totalPlayersEl = document.getElementById("totalPlayers");
+    const averageRatingEl = document.getElementById("averageRating");
+    const activeFiltersEl = document.getElementById("activeFilters");
 
-      // Get search results from database service
-      const searchResults = await window.DatabaseService.searchPlayers(
-        searchTerm
-      );
+    if (totalPlayersEl) {
+      totalPlayersEl.textContent = this.filteredPlayers.length;
+    }
 
-      // Display search results
-      this.displayFilteredPlayers(searchResults);
+    if (averageRatingEl && this.filteredPlayers.length > 0) {
+      const avgRating =
+        this.filteredPlayers.reduce(
+          (sum, player) => sum + (Number(player.overall) || 0),
+          0
+        ) / this.filteredPlayers.length;
+      averageRatingEl.textContent = Math.round(avgRating);
+    }
 
-      console.log(
-        `Searched players with term: "${searchTerm}", found ${searchResults.length} results`
-      );
-    } catch (error) {
-      console.error("Error searching players:", error);
-      window.DOMHelpers.showNotification("Error searching players", "error");
+    if (activeFiltersEl) {
+      let filterText =
+        this.currentFilter === "all" ? "All Players" : this.currentFilter;
+      if (this.searchTerm.trim()) {
+        filterText += ` (Search: "${this.searchTerm}")`;
+      }
+      activeFiltersEl.textContent = filterText;
     }
   },
 
@@ -409,12 +397,7 @@ const TeamManagement = {
   },
 
   /**
-   * Reset all filters and sorting
-   *
-   * This function resets all filters and sorting to their default state
-   * and refreshes the player grid.
-   *
-   * @returns {Promise<void>}
+   * Reset all filters and search
    */
   async resetFilters() {
     try {
@@ -423,7 +406,20 @@ const TeamManagement = {
       this.currentSortDirection = "desc";
       this.searchTerm = "";
 
-      // Regenerate team grid with all players
+      // Reset UI elements
+      const searchInput = document.getElementById("playerSearch");
+      if (searchInput) searchInput.value = "";
+
+      const filterButtons = document.querySelectorAll(".filter-button");
+      filterButtons.forEach((btn) =>
+        btn.classList.remove("filter-button--active")
+      );
+      const allButton = document.querySelector(
+        '.filter-button[data-position="all"]'
+      );
+      if (allButton) allButton.classList.add("filter-button--active");
+
+      // Regenerate team grid
       await this.generateTeamGrid();
 
       console.log("Filters and sorting reset");

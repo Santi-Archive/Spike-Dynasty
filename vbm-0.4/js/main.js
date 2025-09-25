@@ -62,7 +62,7 @@ const VBManager = {
       await this.loadApplicationData();
 
       // Step 2: Run data migration if needed (before authentication)
-      loadingManager.nextStep("Nicole, I miss you!");
+      loadingManager.nextStep("Loading...!");
       await this.runDataMigrationIfNeeded();
 
       // Step 3: Initialize authentication service (after data is ready)

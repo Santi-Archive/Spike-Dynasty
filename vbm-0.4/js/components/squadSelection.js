@@ -117,12 +117,12 @@ const SquadSelection = {
     // Create position slots for each required position
     this.squadPositions.forEach((position, index) => {
       const slot = document.createElement("div");
-      slot.className = "position-slot";
+      slot.className = "position-slot-modern";
       slot.dataset.position = index;
       slot.dataset.requiredPosition = position;
       slot.innerHTML = `
-                <div class="position-slot__label">${position}</div>
-                <div class="position-slot__player" id="starting-${index}"></div>
+                <div class="position-slot-label-modern">${position}</div>
+                <div class="position-slot-player-modern" id="starting-${index}"></div>
             `;
 
       // Add drag and drop event listeners
@@ -155,11 +155,10 @@ const SquadSelection = {
     // Create 9 bench slots
     for (let i = 0; i < 9; i++) {
       const slot = document.createElement("div");
-      slot.className = "bench-slot";
+      slot.className = "bench-slot-modern";
       slot.dataset.bench = i;
       slot.innerHTML = `
-                <div class="position-slot__label">Bench ${i + 1}</div>
-                <div class="position-slot__player" id="bench-${i}"></div>
+                <div class="bench-slot-player-modern" id="bench-${i}"></div>
             `;
 
       // Add drag and drop event listeners
@@ -242,21 +241,26 @@ const SquadSelection = {
    */
   createDraggablePlayerCard(player, index) {
     const playerCard = document.createElement("div");
-    playerCard.className = "draggable-player draggable-player--squad";
+    playerCard.className = "available-player-card-modern";
     playerCard.draggable = true;
     playerCard.dataset.playerId = index;
     playerCard.dataset.playerPosition = player.position;
+
+    const initials = this.getPlayerInitials(
+      player.player_name || "Unknown Player"
+    );
+
     playerCard.innerHTML = `
-            <div class="draggable-player__face">👤</div>
-            <div class="draggable-player__info">
-                <div class="draggable-player__name">${
+            <div class="available-player-avatar-modern">${initials}</div>
+            <div class="available-player-info-modern">
+                <div class="available-player-name-modern">${
                   player.player_name || "Unknown Player"
                 }</div>
-                <div class="player-card__position" data-position="${
+                <div class="available-player-position-modern" data-position="${
                   player.position || "Unknown"
                 }">${player.position || "Unknown Position"}</div>
             </div>
-            <div class="draggable-player__overall">${
+            <div class="available-player-overall-modern">${
               player.overall || "N/A"
             }</div>
         `;
@@ -266,6 +270,18 @@ const SquadSelection = {
     playerCard.addEventListener("dragend", this.handleDragEnd.bind(this));
 
     return playerCard;
+  },
+
+  /**
+   * Get player initials for avatar
+   */
+  getPlayerInitials(name) {
+    return name
+      .split(" ")
+      .map((word) => word.charAt(0))
+      .join("")
+      .toUpperCase()
+      .substring(0, 2);
   },
 
   /**
@@ -317,7 +333,7 @@ const SquadSelection = {
       this.isDragActive = true;
 
       // Add visual feedback
-      e.target.classList.add("dragging");
+      e.target.classList.add("dragging-modern");
 
       console.log(`Started dragging player ${playerId}`);
     } catch (error) {
@@ -337,7 +353,7 @@ const SquadSelection = {
   handleDragEnd(e) {
     try {
       // Remove visual feedback
-      e.target.classList.remove("dragging");
+      e.target.classList.remove("dragging-modern");
 
       // Clear drag state
       this.draggedPlayer = null;
@@ -361,7 +377,7 @@ const SquadSelection = {
    */
   handleDragOver(e) {
     e.preventDefault();
-    e.currentTarget.classList.add("drag-over");
+    e.currentTarget.classList.add("drop-target-modern");
   },
 
   /**
@@ -374,7 +390,7 @@ const SquadSelection = {
    * @returns {void}
    */
   handleDragLeave(e) {
-    e.currentTarget.classList.remove("drag-over");
+    e.currentTarget.classList.remove("drop-target-modern");
   },
 
   /**
@@ -537,24 +553,31 @@ const SquadSelection = {
    * @returns {void}
    */
   placePlayerInStartingPosition(slot, player, playerId, playerPosition) {
-    const playerSlot = slot.querySelector(".position-slot__player");
+    const playerSlot = slot.querySelector(".position-slot-player-modern");
     const positionAbbrev = window.DOMHelpers.getPositionAbbrev(playerPosition);
+    const initials = this.getPlayerInitials(
+      player.player_name || "Unknown Player"
+    );
 
     playerSlot.innerHTML = `
-            <div class="placed-player" draggable="true" data-player-id="${playerId}" data-player-position="${playerPosition}" id="placed-starting-${slot.dataset.position}">
-                <div class="placed-player__face">👤</div>
-                <div class="placed-player__name">${player.player_name}</div>
-                <div style="display: flex; gap: 0.25rem; align-items: center;">
-                    <div class="placed-player__overall">${player.overall}</div>
-                    <div class="placed-player__position" data-position="${positionAbbrev}">${positionAbbrev}</div>
-                </div>
+            <div class="position-slot-player-info-modern">
+                <div class="position-slot-player-avatar-modern">${initials}</div>
+                <div class="position-slot-player-name-modern">${player.player_name}</div>
+                <div class="position-slot-player-position-modern" data-position="${positionAbbrev}">${positionAbbrev}</div>
+                <div class="position-slot-player-overall-modern">${player.overall}</div>
             </div>
         `;
 
-    slot.classList.add("position-slot--occupied");
+    slot.classList.add("position-slot-modern--occupied");
 
     // Add drag event listeners to placed player
-    const placedPlayer = playerSlot.querySelector(".placed-player");
+    const placedPlayer = playerSlot.querySelector(
+      ".position-slot-player-info-modern"
+    );
+    placedPlayer.draggable = true;
+    placedPlayer.dataset.playerId = playerId;
+    placedPlayer.dataset.playerPosition = playerPosition;
+    placedPlayer.id = `placed-starting-${slot.dataset.position}`;
     placedPlayer.addEventListener("dragstart", this.handleDragStart.bind(this));
     placedPlayer.addEventListener("dragend", this.handleDragEnd.bind(this));
   },
@@ -571,24 +594,31 @@ const SquadSelection = {
    * @returns {void}
    */
   placePlayerOnBench(slot, player, playerId, playerPosition) {
-    const playerSlot = slot.querySelector(".position-slot__player");
+    const playerSlot = slot.querySelector(".bench-slot-player-modern");
     const positionAbbrev = window.DOMHelpers.getPositionAbbrev(playerPosition);
+    const initials = this.getPlayerInitials(
+      player.player_name || "Unknown Player"
+    );
 
     playerSlot.innerHTML = `
-            <div class="placed-player" draggable="true" data-player-id="${playerId}" data-player-position="${playerPosition}" id="placed-bench-${slot.dataset.bench}">
-                <div class="placed-player__face">👤</div>
-                <div class="placed-player__name">${player.player_name}</div>
-                <div style="display: flex; gap: 0.25rem; align-items: center;">
-                    <div class="placed-player__overall">${player.overall}</div>
-                    <div class="placed-player__position" data-position="${positionAbbrev}">${positionAbbrev}</div>
-                </div>
+            <div class="bench-slot-player-info-modern">
+                <div class="bench-slot-player-avatar-modern">${initials}</div>
+                <div class="bench-slot-player-name-modern">${player.player_name}</div>
+                <div class="bench-slot-player-position-modern" data-position="${positionAbbrev}">${positionAbbrev}</div>
+                <div class="bench-slot-player-overall-modern">${player.overall}</div>
             </div>
         `;
 
-    slot.classList.add("bench-slot--occupied");
+    slot.classList.add("bench-slot-modern--occupied");
 
     // Add drag event listeners to placed player
-    const placedPlayer = playerSlot.querySelector(".placed-player");
+    const placedPlayer = playerSlot.querySelector(
+      ".bench-slot-player-info-modern"
+    );
+    placedPlayer.draggable = true;
+    placedPlayer.dataset.playerId = playerId;
+    placedPlayer.dataset.playerPosition = playerPosition;
+    placedPlayer.id = `placed-bench-${slot.dataset.bench}`;
     placedPlayer.addEventListener("dragstart", this.handleDragStart.bind(this));
     placedPlayer.addEventListener("dragend", this.handleDragEnd.bind(this));
   },
@@ -602,8 +632,8 @@ const SquadSelection = {
    * @returns {void}
    */
   showInvalidDrop(slot) {
-    slot.classList.add("invalid-drop");
-    setTimeout(() => slot.classList.remove("invalid-drop"), 1000);
+    slot.classList.add("invalid-drop-modern");
+    setTimeout(() => slot.classList.remove("invalid-drop-modern"), 1000);
   },
 
   /**
@@ -618,7 +648,7 @@ const SquadSelection = {
    */
   updateAvailablePlayerVisibility(playerId, sourceType) {
     const originalCard = document.querySelector(
-      `[data-player-id="${playerId}"].draggable-player`
+      `[data-player-id="${playerId}"].available-player-card-modern`
     );
 
     if (sourceType === "available") {
@@ -644,7 +674,9 @@ const SquadSelection = {
    */
   updateAllAvailablePlayerVisibility() {
     // Get all currently placed players
-    const placedPlayers = document.querySelectorAll(".placed-player");
+    const placedPlayers = document.querySelectorAll(
+      ".position-slot-player-info-modern, .bench-slot-player-info-modern"
+    );
     const placedPlayerIds = new Set();
 
     placedPlayers.forEach((player) => {
@@ -655,7 +687,9 @@ const SquadSelection = {
     });
 
     // Update visibility of all available players
-    const availablePlayers = document.querySelectorAll(".draggable-player");
+    const availablePlayers = document.querySelectorAll(
+      ".available-player-card-modern"
+    );
     availablePlayers.forEach((player) => {
       const playerId = player.dataset.playerId;
       if (placedPlayerIds.has(playerId)) {
@@ -679,13 +713,19 @@ const SquadSelection = {
 
     const sourceElement = document.getElementById(sourceElementId);
     if (sourceElement) {
-      const parentSlot = sourceElement.closest(".position-slot, .bench-slot");
+      const parentSlot = sourceElement.closest(
+        ".position-slot-modern, .bench-slot-modern"
+      );
       if (parentSlot) {
-        const playerSlot = parentSlot.querySelector(".position-slot__player");
-        playerSlot.innerHTML = "";
+        const playerSlot = parentSlot.querySelector(
+          ".position-slot-player-modern, .bench-slot-player-modern"
+        );
+        if (playerSlot) {
+          playerSlot.innerHTML = "";
+        }
         parentSlot.classList.remove(
-          "position-slot--occupied",
-          "bench-slot--occupied"
+          "position-slot-modern--occupied",
+          "bench-slot-modern--occupied"
         );
       }
     }
@@ -949,8 +989,8 @@ const SquadSelection = {
         const slot = document.getElementById(`starting-${i}`);
         if (slot) {
           slot.innerHTML = `
-                        <div class="position-slot__label">${this.squadPositions[i]}</div>
-                        <div class="position-slot__player" id="starting-${i}"></div>
+                        <div class="position-slot-label-modern">${this.squadPositions[i]}</div>
+                        <div class="position-slot-player-modern" id="starting-${i}"></div>
                     `;
         }
       }
@@ -960,14 +1000,26 @@ const SquadSelection = {
         const slot = document.getElementById(`bench-${i}`);
         if (slot) {
           slot.innerHTML = `
-                        <div class="position-slot__label">Bench ${i + 1}</div>
-                        <div class="position-slot__player" id="bench-${i}"></div>
+                        <div class="bench-slot-player-modern" id="bench-${i}"></div>
                     `;
         }
       }
 
+      // Clear occupied classes from all slots
+      const allSlots = document.querySelectorAll(
+        ".position-slot-modern, .bench-slot-modern"
+      );
+      allSlots.forEach((slot) => {
+        slot.classList.remove(
+          "position-slot-modern--occupied",
+          "bench-slot-modern--occupied"
+        );
+      });
+
       // Show all available players
-      const availablePlayers = document.querySelectorAll(".draggable-player");
+      const availablePlayers = document.querySelectorAll(
+        ".available-player-card-modern"
+      );
       availablePlayers.forEach((player) => {
         player.style.display = "flex";
       });

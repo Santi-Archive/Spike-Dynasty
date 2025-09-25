@@ -138,25 +138,74 @@
             <div class="match-preview-enhanced" id="matchSimulation">
               <div class="match-preview-enhanced__glow"></div>
               <div class="match-preview-enhanced__content">
-                <div class="match-preview-enhanced__badge">
-                  <span class="match-preview-enhanced__badge-text"
-                    >Live Match</span
-                  >
-                  <div class="match-preview-enhanced__pulse"></div>
-                </div>
-                <h3 class="match-preview-enhanced__title">Today's Match</h3>
-                <p class="match-preview-enhanced__description">
-                  You have a match scheduled for today. Prepare your team and
-                  simulate the match!
-                </p>
-                <button
-                  class="btn-enhanced btn-enhanced--primary"
-                  onclick="showPage('match-simulation')"
+                <!-- Match day content -->
+                <div
+                  class="match-preview-enhanced__match-content"
+                  id="matchContent"
                 >
-                  <span class="btn-enhanced__icon">⚡</span>
-                  <span class="btn-enhanced__text">Go to Match Simulation</span>
-                  <div class="btn-enhanced__glow"></div>
-                </button>
+                  <div class="match-preview-enhanced__badge">
+                    <span class="match-preview-enhanced__badge-text"
+                      >Live Match</span
+                    >
+                    <div class="match-preview-enhanced__pulse"></div>
+                  </div>
+                  <h3 class="match-preview-enhanced__title">Today's Match</h3>
+                  <p class="match-preview-enhanced__description">
+                    You have a match scheduled for today. Prepare your team and
+                    simulate the match!
+                  </p>
+                  <button
+                    class="btn-enhanced btn-enhanced--primary"
+                    onclick="showPage('match-simulation')"
+                  >
+                    <span class="btn-enhanced__icon">⚡</span>
+                    <span class="btn-enhanced__text"
+                      >Go to Match Simulation</span
+                    >
+                    <div class="btn-enhanced__glow"></div>
+                  </button>
+                </div>
+
+                <!-- Training day content -->
+                <div
+                  class="match-preview-enhanced__training-content"
+                  id="trainingContent"
+                  style="display: none"
+                >
+                  <div
+                    class="match-preview-enhanced__badge match-preview-enhanced__badge--training"
+                  >
+                    <span class="match-preview-enhanced__badge-text"
+                      >Training Day</span
+                    >
+                    <div class="match-preview-enhanced__pulse"></div>
+                  </div>
+                  <h3 class="match-preview-enhanced__title">
+                    Today's Training
+                  </h3>
+                  <p class="match-preview-enhanced__description">
+                    Focus on improving your team's skills and preparing for the
+                    next match. Review your squad and make strategic decisions.
+                  </p>
+                  <div class="match-preview-enhanced__training-actions">
+                    <button
+                      class="btn-enhanced btn-enhanced--secondary"
+                      onclick="showPage('squad-selection')"
+                    >
+                      <span class="btn-enhanced__icon">👥</span>
+                      <span class="btn-enhanced__text">Manage Squad</span>
+                      <div class="btn-enhanced__glow"></div>
+                    </button>
+                    <button
+                      class="btn-enhanced btn-enhanced--secondary"
+                      onclick="showPage('team-management')"
+                    >
+                      <span class="btn-enhanced__icon">⚙️</span>
+                      <span class="btn-enhanced__text">Team Management</span>
+                      <div class="btn-enhanced__glow"></div>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -280,7 +329,88 @@
         <div id="team-management" class="page">
           <div class="page__header">
             <h1 class="page__title">Team Management</h1>
-            <p class="page__subtitle">View and manage your players</p>
+            <p class="page__subtitle">
+              View and manage your volleyball team roster
+            </p>
+          </div>
+
+          <!-- Enhanced team management controls -->
+          <div class="team-management-controls">
+            <div class="team-management-controls__header">
+              <h2 class="team-management-controls__title">Player Roster</h2>
+              <div class="team-management-controls__stats">
+                <div class="team-management-controls__stat">
+                  <span
+                    class="team-management-controls__stat-value"
+                    id="totalPlayers"
+                    >0</span
+                  >
+                  <span>Total Players</span>
+                </div>
+                <div class="team-management-controls__stat">
+                  <span
+                    class="team-management-controls__stat-value"
+                    id="averageRating"
+                    >0</span
+                  >
+                  <span>Avg Rating</span>
+                </div>
+                <div class="team-management-controls__stat">
+                  <span
+                    class="team-management-controls__stat-value"
+                    id="activeFilters"
+                    >All</span
+                  >
+                  <span>Showing</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="team-management-controls__filters">
+              <!-- Enhanced search functionality -->
+              <div class="team-management-search">
+                <div class="team-management-search__icon">🔍</div>
+                <input
+                  type="text"
+                  class="team-management-search__input"
+                  placeholder="Search players by name, position, or stats..."
+                  id="playerSearch"
+                />
+              </div>
+
+              <!-- Position filter buttons -->
+              <div class="team-management-filters">
+                <button
+                  class="filter-button filter-button--active"
+                  data-position="all"
+                >
+                  All Positions
+                </button>
+                <button class="filter-button" data-position="Outside Hitter">
+                  Outside Hitter
+                </button>
+                <button class="filter-button" data-position="Middle Blocker">
+                  Middle Blocker
+                </button>
+                <button class="filter-button" data-position="Setter">
+                  Setter
+                </button>
+                <button class="filter-button" data-position="Libero">
+                  Libero
+                </button>
+                <button class="filter-button" data-position="Opposite Hitter">
+                  Opposite Hitter
+                </button>
+              </div>
+
+              <!-- Sort dropdown -->
+              <div class="sort-dropdown">
+                <button class="sort-dropdown__button" id="sortButton">
+                  <span>Sort by Overall</span>
+                  <span>↓</span>
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Grid container for player cards -->
@@ -298,31 +428,34 @@
             </p>
           </div>
 
-          <div class="squad-layout">
-            <!-- Squad sections container -->
-            <div class="squad-layout__sections">
-              <!-- Starting lineup section -->
-              <div class="squad-section">
-                <h2 class="section-title">Starting 7</h2>
-                <div class="squad-section__positions" id="startingPositions">
+          <div class="squad-layout-modern">
+            <!-- Available Players Section (Left Side) -->
+            <div class="available-players-modern">
+              <h2 class="available-players-modern__title">Available Players</h2>
+              <div class="available-players-modern__grid" id="availablePlayers">
+                Available players will be generated by JavaScript
+              </div>
+            </div>
+
+            <!-- Squad Sections (Right Side) -->
+            <div class="squad-sections-modern">
+              <!-- Starting 7 Section -->
+              <div class="starting-seven-modern">
+                <h2 class="starting-seven-modern__title">STARTING 7</h2>
+                <div
+                  class="starting-seven-modern__positions"
+                  id="startingPositions"
+                >
                   Starting positions will be generated by JavaScript
                 </div>
               </div>
 
-              <!-- Bench players section -->
-              <div class="squad-section">
-                <h2 class="section-title">Bench Players</h2>
-                <div class="squad-section__bench" id="benchSlots">
+              <!-- Bench Section -->
+              <div class="bench-modern">
+                <h2 class="bench-modern__title">BENCH</h2>
+                <div class="bench-modern__slots" id="benchSlots">
                   Bench slots will be generated by JavaScript
                 </div>
-              </div>
-            </div>
-
-            <!-- Available players section -->
-            <div class="available-players">
-              <h2 class="section-title">Available Players</h2>
-              <div class="available-players__grid" id="availablePlayers">
-                Available players will be generated by JavaScript
               </div>
             </div>
           </div>

@@ -1,4 +1,53 @@
-n**: Choose and manage your team upon registration
+# Spike Dynasty - Volleyball Manager v0.4
+
+A comprehensive volleyball team management application built with modern web technologies, featuring a PostgreSQL database backend with Supabase integration, user authentication, and a rich interactive interface.
+
+## 🏐 Overview
+
+Spike Dynasty is a feature-rich volleyball management simulation that allows you to manage your team, scout players, make transfers, and simulate matches. Built with a modern tech stack including Supabase for database management, the application provides a realistic and engaging volleyball management experience.
+
+## ✨ Key Features
+
+### �� Dashboard
+- **Interactive Calendar**: Visual season progress with match days and training sessions
+- **Team Statistics**: Real-time team performance metrics and win/loss records
+- **Match Preview**: Quick access to upcoming matches with enhanced visual design
+- **Season Progress**: Track your team's journey through the season with day-by-day progression
+
+### 👥 Team Management
+- **Player Roster**: Comprehensive player database with detailed statistics
+- **Player Profiles**: In-depth player information including stats, contracts, and performance history
+- **Search & Filter**: Advanced filtering by position, nationality, rating, and more
+- **Player Development**: Track player growth and potential
+
+### ⚡ Squad Selection
+- **Drag & Drop Interface**: Intuitive squad selection with visual feedback
+- **Position Management**: 7 starting positions (2 Outside Hitters, 2 Middle Blockers, 1 Setter, 1 Opposite Hitter, 1 Libero)
+- **Bench Management**: 9 bench slots for strategic substitutions
+- **Formation Validation**: Ensures proper team composition and position requirements
+
+### 📊 Standings & Leagues
+- **Multi-League Support**: View standings across different leagues
+- **Interactive Tables**: Sort and filter team performance data
+- **Team Comparisons**: Compare your team against competitors
+- **Season Statistics**: Track wins, losses, points, and goal differences
+
+### 💰 Transfer Market
+- **Player Database**: Browse thousands of available players
+- **Transfer Offers**: Make and manage transfer offers with custom messages
+- **Negotiation System**: Realistic transfer negotiations with AI responses
+- **Market Analysis**: Player value calculations and market trends
+
+### �� Match Simulation
+- **Realistic Engine**: Advanced simulation based on team strength and tactics
+- **Live Commentary**: Dynamic match commentary and key moments
+- **Statistics Tracking**: Detailed match statistics and player performance
+- **Season Mode**: Complete season simulation with league progression
+
+### 🔐 User Authentication
+- **Secure Login**: Email/password authentication with Supabase Auth
+- **User Profiles**: Personalized user accounts with team associations
+- **Team Selection**: Choose and manage your team upon registration
 - **Session Management**: Persistent login sessions with automatic refresh
 
 ## ��️ Technical Architecture

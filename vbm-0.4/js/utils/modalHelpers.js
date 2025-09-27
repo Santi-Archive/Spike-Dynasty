@@ -11,6 +11,64 @@
  */
 
 /**
+ * Get country flag image path for player avatar
+ */
+function getCountryFlagPath(country) {
+  if (!country) {
+    return null;
+  }
+
+  // Clean country name to match file naming convention
+  const cleanCountry = country.trim();
+
+  // Check if flag file exists by attempting to construct the path
+  const flagPath = `database/flags/${cleanCountry}.png`;
+
+  return flagPath;
+}
+
+/**
+ * Create country flag avatar element for modal
+ */
+function createCountryFlagAvatar(country, playerName) {
+  const flagPath = getCountryFlagPath(country);
+
+  if (flagPath) {
+    const img = document.createElement("img");
+    img.src = flagPath;
+    img.alt = `${country} flag`;
+    img.className = "modal__flag-avatar";
+    img.onerror = () => {
+      // Fallback to emoji if flag fails to load
+      img.style.display = "none";
+      const fallbackDiv = document.createElement("div");
+      fallbackDiv.className = "modal__avatar-fallback";
+      fallbackDiv.textContent = "👤";
+      img.parentNode.appendChild(fallbackDiv);
+    };
+    return img;
+  }
+
+  // Fallback to emoji if no country
+  const fallbackDiv = document.createElement("div");
+  fallbackDiv.className = "modal__avatar-fallback";
+  fallbackDiv.textContent = "👤";
+  return fallbackDiv;
+}
+
+/**
+ * Get player initials for avatar (fallback)
+ */
+function getPlayerInitials(name) {
+  return name
+    .split(" ")
+    .map((word) => word.charAt(0))
+    .join("")
+    .toUpperCase()
+    .substring(0, 2);
+}
+
+/**
  * Show player details modal with comprehensive information
  *
  * This function creates and displays a detailed modal for a player,
@@ -111,7 +169,7 @@ function showPlayerModal(player) {
             <button class="modal__close" onclick="closePlayerModal()">&times;</button>
         </div>
         <div class="modal__player-info">
-            <div class="modal__player-face">👤</div>
+            <div class="modal__player-face"></div>
             <div class="modal__player-details">
                 <h3 class="modal__player-name">${
                   player.player_name || "Unknown Player"
@@ -177,6 +235,16 @@ function showPlayerModal(player) {
         </div>
         ${contractSection}
     `;
+
+  // Insert country flag avatar into the modal
+  const playerFaceContainer = modalContent.querySelector(".modal__player-face");
+  if (playerFaceContainer) {
+    const avatarElement = createCountryFlagAvatar(
+      player.country,
+      player.player_name || "Unknown Player"
+    );
+    playerFaceContainer.appendChild(avatarElement);
+  }
 
   // Show the modal
   modal.classList.add("modal--active");

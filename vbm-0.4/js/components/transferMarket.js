@@ -193,6 +193,38 @@ const TransferMarket = {
   },
 
   /**
+   * Get country flag image path for player avatar
+   */
+  getCountryFlagPath(country) {
+    if (!country) {
+      return null;
+    }
+
+    // Clean country name to match file naming convention
+    const cleanCountry = country.trim();
+
+    // Check if flag file exists by attempting to construct the path
+    const flagPath = `database/flags/${cleanCountry}.png`;
+
+    return flagPath;
+  },
+
+  /**
+   * Create country flag avatar element for transfer market
+   */
+  createCountryFlagAvatar(country, playerName) {
+    const flagPath = this.getCountryFlagPath(country);
+
+    if (flagPath) {
+      return `<img src="${flagPath}" alt="${country} flag" class="transfer-player-card__flag-avatar" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+              <div class="transfer-player-card__avatar-fallback" style="display: none;">👤</div>`;
+    }
+
+    // Fallback to emoji if no country
+    return '<div class="transfer-player-card__avatar-fallback">👤</div>';
+  },
+
+  /**
    * Generate HTML for a single player card
    *
    * This function creates the HTML for a single player card in the transfer market.
@@ -202,13 +234,17 @@ const TransferMarket = {
    */
   generatePlayerCardHTML(player) {
     const transferPrice = this.calculateTransferPrice(player);
+    const avatarHTML = this.createCountryFlagAvatar(
+      player.country,
+      player.player_name
+    );
 
     return `
             <div class="transfer-player-card" data-player-id="${
               player.id
             }" data-player-name="${player.player_name}">
                 <div class="transfer-player-card__top">
-                    <div class="transfer-player-card__face">👤</div>
+                    <div class="transfer-player-card__face">${avatarHTML}</div>
                     <div class="transfer-player-card__info">
                         <div class="transfer-player-card__name">${
                           player.player_name || "Unknown Player"

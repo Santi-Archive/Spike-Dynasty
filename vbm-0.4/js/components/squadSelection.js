@@ -352,12 +352,14 @@ const SquadSelection = {
     playerCard.dataset.playerId = player.id;
     playerCard.dataset.playerPosition = player.position;
 
-    const initials = this.getPlayerInitials(
+    // Create country flag avatar
+    const avatarElement = this.createCountryFlagAvatar(
+      player.country,
       player.player_name || "Unknown Player"
     );
 
     playerCard.innerHTML = `
-            <div class="available-player-avatar-modern">${initials}</div>
+            <div class="available-player-avatar-modern"></div>
             <div class="available-player-info-modern">
                 <div class="available-player-name-modern">${
                   player.player_name || "Unknown Player"
@@ -370,6 +372,12 @@ const SquadSelection = {
               player.overall || "N/A"
             }</div>
         `;
+
+    // Insert the avatar element into the avatar container
+    const avatarContainer = playerCard.querySelector(
+      ".available-player-avatar-modern"
+    );
+    avatarContainer.appendChild(avatarElement);
 
     // Add drag and drop functionality
     this.setupDragAndDropForPlayerCard(playerCard, player);
@@ -386,7 +394,7 @@ const SquadSelection = {
   },
 
   /**
-   * Get player initials for avatar
+   * Get player initials for avatar (fallback)
    */
   getPlayerInitials(name) {
     return name
@@ -395,6 +403,52 @@ const SquadSelection = {
       .join("")
       .toUpperCase()
       .substring(0, 2);
+  },
+
+  /**
+   * Get country flag image path for player avatar
+   */
+  getCountryFlagPath(country) {
+    if (!country) {
+      return null;
+    }
+
+    // Clean country name to match file naming convention
+    const cleanCountry = country.trim();
+
+    // Check if flag file exists by attempting to construct the path
+    const flagPath = `database/flags/${cleanCountry}.png`;
+
+    return flagPath;
+  },
+
+  /**
+   * Create country flag avatar element for squad selection
+   */
+  createCountryFlagAvatar(country, playerName) {
+    const flagPath = this.getCountryFlagPath(country);
+
+    if (flagPath) {
+      const img = document.createElement("img");
+      img.src = flagPath;
+      img.alt = `${country} flag`;
+      img.className = "available-player-flag-avatar";
+      img.onerror = () => {
+        // Fallback to initials if flag fails to load
+        img.style.display = "none";
+        const fallbackDiv = document.createElement("div");
+        fallbackDiv.className = "available-player-avatar-fallback";
+        fallbackDiv.textContent = this.getPlayerInitials(playerName);
+        img.parentNode.appendChild(fallbackDiv);
+      };
+      return img;
+    }
+
+    // Fallback to initials if no country
+    const fallbackDiv = document.createElement("div");
+    fallbackDiv.className = "available-player-avatar-fallback";
+    fallbackDiv.textContent = this.getPlayerInitials(playerName);
+    return fallbackDiv;
   },
 
   /**

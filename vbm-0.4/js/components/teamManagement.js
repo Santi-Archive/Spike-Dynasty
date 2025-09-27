@@ -170,14 +170,16 @@ const TeamManagement = {
     const playerCard = document.createElement("div");
     playerCard.className = "player-card";
 
-    const initials = this.getPlayerInitials(
+    // Create country flag avatar
+    const avatarElement = this.createCountryFlagAvatar(
+      player.country,
       player.player_name || "Unknown Player"
     );
 
     playerCard.innerHTML = `
       <div class="player-card__header">
         <div class="player-card__info">
-          <div class="player-card__avatar">${initials}</div>
+          <div class="player-card__avatar"></div>
           <div class="player-card__details">
             <div class="player-card__name">${
               player.player_name || "Unknown Player"
@@ -217,6 +219,10 @@ const TeamManagement = {
       </div>
     `;
 
+    // Insert the avatar element into the avatar container
+    const avatarContainer = playerCard.querySelector(".player-card__avatar");
+    avatarContainer.appendChild(avatarElement);
+
     // Add click event listener to show player details
     playerCard.addEventListener("click", () => {
       this.showPlayerDetails(player);
@@ -226,7 +232,7 @@ const TeamManagement = {
   },
 
   /**
-   * Get player initials for avatar
+   * Get player initials for avatar (fallback)
    */
   getPlayerInitials(name) {
     return name
@@ -235,6 +241,52 @@ const TeamManagement = {
       .join("")
       .toUpperCase()
       .substring(0, 2);
+  },
+
+  /**
+   * Get country flag image path for player avatar
+   */
+  getCountryFlagPath(country) {
+    if (!country) {
+      return null;
+    }
+
+    // Clean country name to match file naming convention
+    const cleanCountry = country.trim();
+
+    // Check if flag file exists by attempting to construct the path
+    const flagPath = `database/flags/${cleanCountry}.png`;
+
+    return flagPath;
+  },
+
+  /**
+   * Create country flag avatar element
+   */
+  createCountryFlagAvatar(country, playerName) {
+    const flagPath = this.getCountryFlagPath(country);
+
+    if (flagPath) {
+      const img = document.createElement("img");
+      img.src = flagPath;
+      img.alt = `${country} flag`;
+      img.className = "player-card__flag-avatar";
+      img.onerror = () => {
+        // Fallback to initials if flag fails to load
+        img.style.display = "none";
+        const fallbackDiv = document.createElement("div");
+        fallbackDiv.className = "player-card__avatar-fallback";
+        fallbackDiv.textContent = this.getPlayerInitials(playerName);
+        img.parentNode.appendChild(fallbackDiv);
+      };
+      return img;
+    }
+
+    // Fallback to initials if no country
+    const fallbackDiv = document.createElement("div");
+    fallbackDiv.className = "player-card__avatar-fallback";
+    fallbackDiv.textContent = this.getPlayerInitials(playerName);
+    return fallbackDiv;
   },
 
   /**

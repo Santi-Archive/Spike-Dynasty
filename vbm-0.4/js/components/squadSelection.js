@@ -793,16 +793,29 @@ const SquadSelection = {
             <div class="player-stat-label">SET</div>
           </div>
         </div>
-        <div class="player-position-footer" data-position="${this.getPositionDisplayName(
-          player.position || "Unknown"
-        )}">
-          <div class="player-position-text">${this.getPositionDisplayName(
+        <div class="player-card-footer">
+          <div class="player-position-footer" data-position="${this.getPositionDisplayName(
             player.position || "Unknown"
-          )}</div>
+          )}">
+            <div class="player-position-text">${this.getPositionDisplayName(
+              player.position || "Unknown"
+            )}</div>
+          </div>
+          <div class="player-flag-container"></div>
         </div>
         <button class="remove-player-btn" onclick="SquadSelection.removeFromSquad('starter', ${positionIndex})">×</button>
       </div>
     `;
+
+    // Insert country flag avatar into the flag container
+    const flagContainer = slot.querySelector(".player-flag-container");
+    if (flagContainer) {
+      const flagElement = this.createCountryFlagAvatar(
+        player.country,
+        player.player_name || "Unknown Player"
+      );
+      flagContainer.appendChild(flagElement);
+    }
 
     slot.dataset.playerId = player.id;
     slot.classList.add("position-slot-modern--occupied");
@@ -916,16 +929,29 @@ const SquadSelection = {
             <div class="player-stat-label">SET</div>
           </div>
         </div>
-        <div class="player-position-footer" data-position="${this.getPositionDisplayName(
-          player.position || "Unknown"
-        )}">
-          <div class="player-position-text">${this.getPositionDisplayName(
+        <div class="player-card-footer">
+          <div class="player-position-footer" data-position="${this.getPositionDisplayName(
             player.position || "Unknown"
-          )}</div>
+          )}">
+            <div class="player-position-text">${this.getPositionDisplayName(
+              player.position || "Unknown"
+            )}</div>
+          </div>
+          <div class="player-flag-container"></div>
         </div>
         <button class="remove-player-btn" onclick="SquadSelection.removeFromSquad('bench', ${benchIndex})">×</button>
       </div>
     `;
+
+    // Insert country flag avatar into the flag container
+    const flagContainer = slot.querySelector(".player-flag-container");
+    if (flagContainer) {
+      const flagElement = this.createCountryFlagAvatar(
+        player.country,
+        player.player_name || "Unknown Player"
+      );
+      flagContainer.appendChild(flagElement);
+    }
 
     slot.dataset.playerId = player.id;
     slot.classList.add("bench-slot-modern--occupied");

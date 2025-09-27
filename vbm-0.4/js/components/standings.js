@@ -33,22 +33,43 @@ const Standings = {
     try {
       console.log("Initializing Standings component...");
 
-      // Show loading screen for standings
+      // Show loading screen for standings with timeout
       window.DOMHelpers.showComponentLoading("Standings", 0);
 
-      // Generate the standings tables
-      await this.generateStandings();
+      // Set up a timeout to force hide loading screen if it gets stuck
+      const loadingTimeout = setTimeout(() => {
+        console.warn(
+          "Standings initialization timeout, force hiding loading screen"
+        );
+        window.DOMHelpers.forceHideLoadingScreen();
+        window.DOMHelpers.showNotification(
+          "Standings loading timed out. Please try again.",
+          "error"
+        );
+      }, 20000); // 20 second timeout
 
-      console.log("Standings component initialized successfully");
+      try {
+        // Generate the standings tables
+        await this.generateStandings();
 
-      // Hide loading screen after successful initialization
-      window.DOMHelpers.hideLoadingScreen();
+        console.log("Standings component initialized successfully");
+
+        // Clear timeout and hide loading screen after successful initialization
+        clearTimeout(loadingTimeout);
+        window.DOMHelpers.hideLoadingScreen();
+      } catch (error) {
+        clearTimeout(loadingTimeout);
+        throw error;
+      }
     } catch (error) {
       console.error("Error initializing Standings:", error);
       // Hide loading screen on error
-      window.DOMHelpers.hideLoadingScreen();
+      window.DOMHelpers.forceHideLoadingScreen();
       // Show error notification
-      window.DOMHelpers.showNotification("Error loading standings", "error");
+      window.DOMHelpers.showNotification(
+        "Error loading standings. Please try again.",
+        "error"
+      );
       throw error;
     }
   },

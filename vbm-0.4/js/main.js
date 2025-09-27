@@ -277,12 +277,18 @@ const VBManager = {
       window.addEventListener("unhandledrejection", (event) => {
         console.error("Unhandled promise rejection:", event.reason);
         this.handleError(event.reason, "Unhandled Promise Rejection");
+
+        // Force hide loading screen on unhandled promise rejection
+        window.DOMHelpers.forceHideLoadingScreen();
       });
 
       // Global error handling for JavaScript errors
       window.addEventListener("error", (event) => {
         console.error("Global error:", event.error);
         this.handleError(event.error, "Global Error Handler");
+
+        // Force hide loading screen on global errors
+        window.DOMHelpers.forceHideLoadingScreen();
       });
 
       console.log("Global event listeners initialized successfully");

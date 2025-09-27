@@ -266,12 +266,20 @@ function throttle(func, limit) {
  *
  * @param {string} message - Loading message to display
  * @param {number} progress - Progress percentage (0-100)
+ * @param {number} timeout - Timeout in milliseconds (default: 30000)
  * @returns {void}
  */
-function showLoadingScreen(message = "Loading application...", progress = 0) {
+function showLoadingScreen(
+  message = "Loading application...",
+  progress = 0,
+  timeout = 30000
+) {
   const loadingScreen = document.getElementById("loadingScreen");
   const loadingMessage = document.getElementById("loadingMessage");
   const loadingProgress = document.getElementById("loadingProgress");
+
+  // Track when loading screen was shown
+  window.lastLoadingShowTime = Date.now();
 
   if (loadingScreen) {
     loadingScreen.classList.remove("loading-screen--hidden");
@@ -285,6 +293,20 @@ function showLoadingScreen(message = "Loading application...", progress = 0) {
   if (loadingProgress) {
     loadingProgress.style.width = `${Math.max(0, Math.min(100, progress))}%`;
   }
+
+  // Set up timeout to force hide loading screen
+  if (window.loadingTimeout) {
+    clearTimeout(window.loadingTimeout);
+  }
+
+  window.loadingTimeout = setTimeout(() => {
+    console.warn("Loading screen timeout reached, force hiding...");
+    forceHideLoadingScreen();
+    window.DOMHelpers.showNotification(
+      "Loading timed out. Please try again.",
+      "error"
+    );
+  }, timeout);
 }
 
 /**
@@ -298,6 +320,12 @@ function showLoadingScreen(message = "Loading application...", progress = 0) {
 function hideLoadingScreen() {
   const loadingScreen = document.getElementById("loadingScreen");
 
+  // Clear any existing timeout
+  if (window.loadingTimeout) {
+    clearTimeout(window.loadingTimeout);
+    window.loadingTimeout = null;
+  }
+
   if (loadingScreen) {
     loadingScreen.classList.add("loading-screen--hidden");
 
@@ -307,6 +335,80 @@ function hideLoadingScreen() {
         loadingScreen.style.display = "none";
       }
     }, 500); // Match the CSS transition duration
+  }
+}
+
+/**
+ * Force hide loading screen (emergency fallback)
+ *
+ * This function immediately hides the loading screen without animation
+ * and should be used as a fallback when normal hiding fails.
+ *
+ * @returns {void}
+ */
+function forceHideLoadingScreen() {
+  const loadingScreen = document.getElementById("loadingScreen");
+
+  if (loadingScreen) {
+    loadingScreen.style.display = "none";
+    loadingScreen.classList.add("loading-screen--hidden");
+    console.log("Loading screen force hidden");
+  }
+
+  // Clear any existing timeout
+  if (window.loadingTimeout) {
+    clearTimeout(window.loadingTimeout);
+    window.loadingTimeout = null;
+  }
+}
+
+/**
+ * Check for stuck loading screens and provide recovery
+ *
+ * This function checks if a loading screen has been visible for too long
+ * and provides a manual recovery option.
+ *
+ * @returns {void}
+ */
+function checkForStuckLoadingScreen() {
+  const loadingScreen = document.getElementById("loadingScreen");
+
+  if (
+    loadingScreen &&
+    !loadingScreen.classList.contains("loading-screen--hidden")
+  ) {
+    const now = Date.now();
+    const lastShowTime = window.lastLoadingShowTime || now;
+    const timeVisible = now - lastShowTime;
+
+    // If loading screen has been visible for more than 30 seconds
+    if (timeVisible > 30000) {
+      console.warn(
+        "Loading screen appears to be stuck, providing recovery option"
+      );
+
+      // Show a recovery notification
+      window.DOMHelpers.showNotification(
+        "Loading appears to be stuck. Click here to force continue.",
+        "warning"
+      );
+
+      // Add click handler to the notification for manual recovery
+      setTimeout(() => {
+        const notifications = document.querySelectorAll(".notification");
+        const lastNotification = notifications[notifications.length - 1];
+        if (lastNotification) {
+          lastNotification.style.cursor = "pointer";
+          lastNotification.addEventListener("click", () => {
+            window.DOMHelpers.forceHideLoadingScreen();
+            window.DOMHelpers.showNotification(
+              "Loading screen cleared. You can now continue.",
+              "success"
+            );
+          });
+        }
+      }, 100);
+    }
   }
 }
 
@@ -450,9 +552,16 @@ window.DOMHelpers = {
   throttle,
   showLoadingScreen,
   hideLoadingScreen,
+  forceHideLoadingScreen,
+  checkForStuckLoadingScreen,
   updateLoadingMessage,
   updateLoadingProgress,
   isLoadingScreenVisible,
   showComponentLoading,
   createLoadingStateManager,
 };
+
+// Set up periodic check for stuck loading screens
+setInterval(() => {
+  checkForStuckLoadingScreen();
+}, 10000); // Check every 10 seconds

@@ -4895,6 +4895,11 @@ body {
   justify-content: flex-start;
 }
 
+/* Ensure player name section is left-aligned in starting 7 */
+.position-slot-player-modern .player-name-section {
+  align-items: flex-start;
+}
+
 /* Player card header with overall rating and name */
 .player-card-header {
   display: flex;
@@ -4907,14 +4912,14 @@ body {
 .player-overall-rating {
   width: 40px;
   height: 40px;
-  background: white;
+  background: #8b5cf6;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: black;
-  font-weight: 700;
-  font-size: 0.875rem;
+  color: white;
+  font-weight: bold;
+  font-size: 1.125rem;
   flex-shrink: 0;
 }
 
@@ -4925,6 +4930,7 @@ body {
   gap: 0.125rem;
   flex: 1;
   min-width: 0;
+  align-items: flex-start;
 }
 
 .player-first-name {
@@ -5169,6 +5175,11 @@ body {
   flex: 1;
   min-width: 0;
   justify-content: flex-start;
+}
+
+/* Ensure player name section is left-aligned in bench */
+.bench-slot-player-modern .player-name-section {
+  align-items: flex-start;
 }
 
 .bench-slot-player-avatar-modern {

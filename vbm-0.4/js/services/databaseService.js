@@ -24,6 +24,11 @@ const DatabaseService = {
   cacheTimeout: 5 * 60 * 1000, // 5 minutes
   connectionStatus: "disconnected",
 
+  // Timeout and retry configuration
+  defaultTimeout: 10000, // 10 seconds
+  maxRetries: 3,
+  retryDelay: 1000, // 1 second
+
   /**
    * Initialize the database service
    *
@@ -66,6 +71,79 @@ const DatabaseService = {
       throw new Error("Database Service not initialized");
     }
     return window.SupabaseConfig.getSupabaseClient();
+  },
+
+  /**
+   * Execute database operation with timeout and retry logic
+   *
+   * @param {Function} operation - Database operation function
+   * @param {string} operationName - Name of the operation for logging
+   * @param {number} timeout - Timeout in milliseconds
+   * @param {number} retries - Number of retries
+   * @returns {Promise<any>} - Operation result
+   */
+  async executeWithRetry(
+    operation,
+    operationName,
+    timeout = this.defaultTimeout,
+    retries = this.maxRetries
+  ) {
+    let lastError;
+
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        console.log(
+          `Executing ${operationName} (attempt ${attempt + 1}/${retries + 1})`
+        );
+
+        // Create timeout promise
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(
+            () =>
+              reject(
+                new Error(
+                  `Operation ${operationName} timed out after ${timeout}ms`
+                )
+              ),
+            timeout
+          );
+        });
+
+        // Execute operation with timeout
+        const result = await Promise.race([operation(), timeoutPromise]);
+
+        console.log(`${operationName} completed successfully`);
+        return result;
+      } catch (error) {
+        lastError = error;
+        console.warn(
+          `${operationName} failed (attempt ${attempt + 1}/${retries + 1}):`,
+          error.message
+        );
+
+        // Don't retry on certain errors
+        if (
+          error.message.includes("timed out") ||
+          error.message.includes("not authenticated") ||
+          error.message.includes("permission denied")
+        ) {
+          break;
+        }
+
+        // Wait before retrying (exponential backoff)
+        if (attempt < retries) {
+          const delay = this.retryDelay * Math.pow(2, attempt);
+          console.log(`Retrying ${operationName} in ${delay}ms...`);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+      }
+    }
+
+    console.error(
+      `${operationName} failed after ${retries + 1} attempts:`,
+      lastError
+    );
+    throw lastError;
   },
 
   // ==================== LEAGUES OPERATIONS ====================
@@ -225,44 +303,46 @@ const DatabaseService = {
    * @returns {Promise<Array>} - Array of player objects with team information
    */
   async getPlayers() {
-    try {
-      console.log("DEBUG DatabaseService: getPlayers() called");
+    return await this.executeWithRetry(
+      async () => {
+        console.log("DEBUG DatabaseService: getPlayers() called");
 
-      // Check if AuthService is available
-      if (!window.AuthService) {
-        console.log("DEBUG DatabaseService: AuthService not available yet");
-        return [];
-      }
+        // Check if AuthService is available
+        if (!window.AuthService) {
+          console.log("DEBUG DatabaseService: AuthService not available yet");
+          return [];
+        }
 
-      // Get current user's team
-      const userTeam = window.AuthService.getUserTeam();
-      if (!userTeam) {
-        console.log("DEBUG DatabaseService: No user team found");
-        return [];
-      }
+        // Get current user's team
+        const userTeam = window.AuthService.getUserTeam();
+        if (!userTeam) {
+          console.log("DEBUG DatabaseService: No user team found");
+          return [];
+        }
 
-      const { data, error } = await this.getClient()
-        .from("players")
-        .select(
-          `
+        const { data, error } = await this.getClient()
+          .from("players")
+          .select(
+            `
           *,
           teams(team_name, team_money)
         `
-        )
-        .eq("team_id", userTeam.id)
-        .order("player_name");
+          )
+          .eq("team_id", userTeam.id)
+          .order("player_name");
 
-      if (error) throw error;
-      console.log("DEBUG DatabaseService: Raw data from Supabase:", data);
-      console.log(
-        "DEBUG DatabaseService: Number of players returned:",
-        (data || []).length
-      );
-      return data || [];
-    } catch (error) {
-      console.error("Error fetching players:", error);
-      throw error;
-    }
+        if (error) throw error;
+        console.log("DEBUG DatabaseService: Raw data from Supabase:", data);
+        console.log(
+          "DEBUG DatabaseService: Number of players returned:",
+          (data || []).length
+        );
+        return data || [];
+      },
+      "getPlayers",
+      15000,
+      2
+    ); // 15 second timeout, 2 retries for player data
   },
 
   /**
@@ -1128,21 +1208,23 @@ const DatabaseService = {
    * @returns {Promise<Array>} - Array of team standings objects
    */
   async getStandings() {
-    try {
-      const { data, error } = await this.getClient()
-        .from("team_standings")
-        .select("*")
-        .order("league_id", { ascending: true })
-        .order("points", { ascending: false })
-        .order("wins", { ascending: false })
-        .order("team_name", { ascending: true });
+    return await this.executeWithRetry(
+      async () => {
+        const { data, error } = await this.getClient()
+          .from("team_standings")
+          .select("*")
+          .order("league_id", { ascending: true })
+          .order("points", { ascending: false })
+          .order("wins", { ascending: false })
+          .order("team_name", { ascending: true });
 
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error("Error fetching standings:", error);
-      throw error;
-    }
+        if (error) throw error;
+        return data || [];
+      },
+      "getStandings",
+      15000,
+      2
+    ); // 15 second timeout, 2 retries for standings
   },
 
   /**
@@ -1152,21 +1234,23 @@ const DatabaseService = {
    * @returns {Promise<Array>} - Array of team standings objects for the league
    */
   async getStandingsByLeague(leagueName) {
-    try {
-      const { data, error } = await this.getClient()
-        .from("team_standings")
-        .select("*")
-        .eq("league_name", leagueName)
-        .order("points", { ascending: false })
-        .order("wins", { ascending: false })
-        .order("team_name", { ascending: true });
+    return await this.executeWithRetry(
+      async () => {
+        const { data, error } = await this.getClient()
+          .from("team_standings")
+          .select("*")
+          .eq("league_name", leagueName)
+          .order("points", { ascending: false })
+          .order("wins", { ascending: false })
+          .order("team_name", { ascending: true });
 
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error("Error fetching standings by league:", error);
-      throw error;
-    }
+        if (error) throw error;
+        return data || [];
+      },
+      `getStandingsByLeague(${leagueName})`,
+      12000,
+      2
+    );
   },
 
   /**

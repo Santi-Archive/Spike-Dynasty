@@ -107,7 +107,7 @@ const Standings = {
       window.DOMHelpers.updateLoadingMessage("Fetching standings data...");
       window.DOMHelpers.updateLoadingProgress(40);
 
-      // Get standings data from database
+      // Clear any potential cache and get fresh standings data from database
       const standingsData = await window.DatabaseService.getStandings();
 
       console.log("Standings data from database:", standingsData);
@@ -117,6 +117,16 @@ const Standings = {
           '<div class="no-players">No standings data available.</div>';
         return;
       }
+
+      // Debug: Log team names to identify discrepancy
+      console.log("Team names in standings data:");
+      standingsData.forEach((team, index) => {
+        console.log(
+          `${index + 1}. Team ID: ${team.team_id}, Team Name: "${
+            team.team_name
+          }"`
+        );
+      });
 
       // Update loading progress - organizing data
       window.DOMHelpers.updateLoadingMessage("Organizing league standings...");
@@ -334,28 +344,14 @@ const Standings = {
    */
   async showTeamDetails(team) {
     try {
+      // Debug: Log team data being passed to modal
+      console.log("Team data being passed to modal:", team);
+      console.log("Team name in modal data:", team.team_name);
+
       await window.ModalHelpers.showTeamModal(team);
     } catch (error) {
       console.error("Error showing team details:", error);
       window.DOMHelpers.showNotification("Error showing team details", "error");
-    }
-  },
-
-  /**
-   * Update standings with new data
-   *
-   * This function updates the standings display with new team data.
-   *
-   * @param {Object} newStandings - Updated standings data
-   * @returns {void}
-   */
-  updateStandings(newStandings) {
-    try {
-      console.log("Updating standings with new data:", newStandings);
-      this.generateStandings();
-    } catch (error) {
-      console.error("Error updating standings:", error);
-      window.DOMHelpers.showNotification("Error updating standings", "error");
     }
   },
 

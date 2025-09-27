@@ -295,6 +295,30 @@ const DatabaseService = {
     }
   },
 
+  /**
+   * Update team name
+   *
+   * @param {number} teamId - Team ID
+   * @param {string} teamName - New team name
+   * @returns {Promise<Object>} - Updated team object
+   */
+  async updateTeamName(teamId, teamName) {
+    try {
+      const { data, error } = await this.getClient()
+        .from("teams")
+        .update({ team_name: teamName })
+        .eq("id", teamId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      console.error("Error updating team name:", error);
+      throw error;
+    }
+  },
+
   // ==================== PLAYERS OPERATIONS ====================
 
   /**

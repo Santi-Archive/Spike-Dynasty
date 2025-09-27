@@ -193,8 +193,15 @@ const SquadSelection = {
       slot.className = "position-slot-modern";
       slot.dataset.position = index;
       slot.dataset.requiredPosition = position;
+
+      // Only show label for libero position (index 2)
+      const labelHtml =
+        position === "Libero"
+          ? `<div class="position-slot-label-modern position-slot-label-modern--libero">${position}</div>`
+          : "";
+
       slot.innerHTML = `
-                <div class="position-slot-label-modern">${position}</div>
+                ${labelHtml}
                 <div class="position-slot-player-modern" id="starting-${index}"></div>
             `;
 

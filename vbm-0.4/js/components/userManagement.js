@@ -58,23 +58,7 @@ const UserManagement = {
       });
     }
 
-    // Register form submission
-    const registerForm = document.getElementById("registerForm");
-    if (registerForm) {
-      registerForm.addEventListener("submit", (e) => {
-        e.preventDefault();
-        this.handleRegister(e);
-      });
-    }
-
     // View switching buttons
-    const showRegisterBtn = document.getElementById("showRegister");
-    if (showRegisterBtn) {
-      showRegisterBtn.addEventListener("click", () => {
-        this.showView("register");
-      });
-    }
-
     const showLoginBtn = document.getElementById("showLogin");
     if (showLoginBtn) {
       showLoginBtn.addEventListener("click", () => {
@@ -150,51 +134,6 @@ const UserManagement = {
   },
 
   /**
-   * Handle registration form submission
-   *
-   * @param {Event} event - Form submission event
-   * @returns {Promise<void>}
-   */
-  async handleRegister(event) {
-    try {
-      const formData = new FormData(event.target);
-      const userData = {
-        email: formData.get("email"),
-        password: formData.get("password"),
-        username: formData.get("username"),
-        displayName: formData.get("displayName"),
-      };
-
-      // Validate passwords match
-      if (userData.password !== formData.get("confirmPassword")) {
-        window.DOMHelpers.showNotification("Passwords do not match", "error");
-        return;
-      }
-
-      // Show loading state
-      this.setFormLoading("registerForm", true);
-
-      // Attempt registration
-      const result = await window.AuthService.register(userData);
-
-      if (result.success) {
-        window.DOMHelpers.showNotification(result.message, "success");
-        this.showView("login");
-      } else {
-        window.DOMHelpers.showNotification(result.error, "error");
-      }
-    } catch (error) {
-      console.error("Registration error:", error);
-      window.DOMHelpers.showNotification(
-        "An error occurred during registration",
-        "error"
-      );
-    } finally {
-      this.setFormLoading("registerForm", false);
-    }
-  },
-
-  /**
    * Handle logout
    *
    * @returns {Promise<void>}
@@ -205,7 +144,8 @@ const UserManagement = {
 
       if (result.success) {
         window.DOMHelpers.showNotification(result.message, "success");
-        this.showAuthModal();
+        // Page will refresh automatically after logout, so no need to show auth modal
+        // The page refresh will reload JavaScript and show the auth modal
       } else {
         window.DOMHelpers.showNotification(result.error, "error");
       }
@@ -337,7 +277,7 @@ const UserManagement = {
     this.currentView = viewName;
 
     // Hide all views
-    const views = ["login", "register", "teamSelection"];
+    const views = ["login", "teamSelection"];
     views.forEach((view) => {
       const element = document.getElementById(`${view}View`);
       if (element) {
@@ -361,17 +301,10 @@ const UserManagement = {
    * @returns {void}
    */
   updateViewNavigation() {
-    const showRegisterBtn = document.getElementById("showRegister");
     const showLoginBtn = document.getElementById("showLogin");
 
-    if (showRegisterBtn) {
-      showRegisterBtn.style.display =
-        this.currentView === "login" ? "block" : "none";
-    }
-
     if (showLoginBtn) {
-      showLoginBtn.style.display =
-        this.currentView === "register" ? "block" : "none";
+      showLoginBtn.style.display = "none"; // Always hide since we only have login now
     }
   },
 

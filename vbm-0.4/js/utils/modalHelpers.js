@@ -491,6 +491,40 @@ function showCustomModal(title, content, buttons = []) {
 }
 
 /**
+ * Show a generic modal with provided content
+ *
+ * This function creates a modal that can display any HTML content.
+ * It's a more flexible version of showCustomModal.
+ *
+ * @param {string} title - Modal title
+ * @param {string} content - HTML content to display
+ * @returns {void}
+ */
+function showModal(title, content) {
+  const modal = document.getElementById("playerModal");
+  const modalContent = modal.querySelector(".modal__content");
+
+  if (!modal || !modalContent) {
+    console.error("Modal elements not found for showModal");
+    return;
+  }
+
+  // Generate modal content
+  modalContent.innerHTML = `
+        <div class="modal__header">
+            <h2 class="modal__title">${title}</h2>
+            <button class="modal__close" onclick="closePlayerModal()">&times;</button>
+        </div>
+        <div class="modal__body">
+            ${content}
+        </div>
+    `;
+
+  // Show the modal
+  modal.classList.add("modal--active");
+}
+
+/**
  * Show a confirmation dialog
  *
  * This function creates a simple confirmation modal with Yes/No buttons.
@@ -548,11 +582,22 @@ function initializeModalEventListeners() {
     });
   }
 
+  // Close transfer offer modal when clicking outside
+  const transferOfferModal = document.getElementById("transferOfferModal");
+  if (transferOfferModal) {
+    transferOfferModal.addEventListener("click", function (e) {
+      if (e.target === this) {
+        closeTransferOfferModal();
+      }
+    });
+  }
+
   // Close modals with Escape key
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape") {
       closePlayerModal();
       closeTeamModal();
+      closeTransferOfferModal();
     }
   });
 
@@ -567,11 +612,127 @@ function initializeModalEventListeners() {
 function isModalOpen() {
   const playerModal = document.getElementById("playerModal");
   const teamModal = document.getElementById("teamModal");
+  const transferOfferModal = document.getElementById("transferOfferModal");
 
   return (
     (playerModal && playerModal.classList.contains("modal--active")) ||
-    (teamModal && teamModal.classList.contains("modal--active"))
+    (teamModal && teamModal.classList.contains("modal--active")) ||
+    (transferOfferModal &&
+      transferOfferModal.classList.contains("modal--active"))
   );
+}
+
+/**
+ * Close transfer offer modal
+ *
+ * This function hides the transfer offer modal and cleans up any state.
+ *
+ * @returns {void}
+ */
+function closeTransferOfferModal() {
+  try {
+    const modal = document.getElementById("transferOfferModal");
+    if (modal) {
+      modal.classList.remove("modal--active");
+      document.body.style.overflow = "";
+
+      // Use the transfer market's reset function for proper cleanup
+      if (
+        window.TransferMarket &&
+        typeof window.TransferMarket.resetTransferOfferForm === "function"
+      ) {
+        window.TransferMarket.resetTransferOfferForm();
+      } else {
+        // Fallback cleanup
+        const form = document.getElementById("transferOfferForm");
+        if (form) {
+          form.reset();
+        }
+
+        if (window.currentTransferOffer) {
+          delete window.currentTransferOffer;
+        }
+      }
+
+      console.log("Transfer offer modal closed");
+    }
+  } catch (error) {
+    console.error("Error closing transfer offer modal:", error);
+  }
+}
+
+/**
+ * Show transfer offer modal
+ *
+ * This function displays the transfer offer modal for making offers.
+ *
+ * @param {Object} playerData - Player data for the offer
+ * @param {string} playerData.playerId - Player ID
+ * @param {string} playerData.playerName - Player name
+ * @param {number} playerData.suggestedPrice - Suggested offer price
+ * @returns {void}
+ */
+function showTransferOfferModal(playerData) {
+  try {
+    if (!playerData || !playerData.playerId || !playerData.playerName) {
+      throw new Error("Invalid player data provided to transfer offer modal");
+    }
+
+    const modal = document.getElementById("transferOfferModal");
+    if (!modal) {
+      throw new Error("Transfer offer modal not found in DOM");
+    }
+
+    // Check if transfer market is ready
+    if (
+      window.TransferMarket &&
+      typeof window.TransferMarket.isTransferOfferModalReady === "function"
+    ) {
+      if (!window.TransferMarket.isTransferOfferModalReady()) {
+        throw new Error("Transfer offer modal is not ready");
+      }
+    }
+
+    // Store the current player info for the offer
+    window.currentTransferOffer = {
+      playerId: playerData.playerId,
+      playerName: playerData.playerName,
+      suggestedPrice: playerData.suggestedPrice || 0,
+    };
+
+    // Set the suggested price in the form
+    const offerAmountInput = document.getElementById("offerAmount");
+    if (offerAmountInput) {
+      offerAmountInput.value = playerData.suggestedPrice || 0;
+
+      // Select the value for easy editing
+      setTimeout(() => {
+        offerAmountInput.focus();
+        offerAmountInput.select();
+      }, 100);
+    }
+
+    // Clear any previous form state
+    const form = document.getElementById("transferOfferForm");
+    if (form) {
+      // Reset validation states
+      const inputs = form.querySelectorAll("input, textarea");
+      inputs.forEach((input) => {
+        input.setCustomValidity("");
+      });
+    }
+
+    // Show the modal
+    modal.classList.add("modal--active");
+    document.body.style.overflow = "hidden";
+
+    console.log(
+      `Transfer offer modal opened for ${playerData.playerName} (ID: ${playerData.playerId})`
+    );
+  } catch (error) {
+    console.error("Error showing transfer offer modal:", error);
+    window.DOMHelpers.showNotification("Error opening offer form", "error");
+  }
 }
 
 /**
@@ -582,6 +743,7 @@ function isModalOpen() {
 function closeAllModals() {
   closePlayerModal();
   closeTeamModal();
+  closeTransferOfferModal();
 }
 
 // Export functions to global scope for use throughout the application
@@ -591,7 +753,10 @@ window.ModalHelpers = {
   showTeamModal,
   closeTeamModal,
   showCustomModal,
+  showModal,
   showConfirmationModal,
+  showTransferOfferModal,
+  closeTransferOfferModal,
   initializeModalEventListeners,
   isModalOpen,
   closeAllModals,

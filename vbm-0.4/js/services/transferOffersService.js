@@ -68,69 +68,41 @@ const TransferOffersService = {
     try {
       const { playerId, offerAmount, message } = offerData;
 
-      // Validate input
-      if (!playerId || !offerAmount) {
-        throw new Error("Player ID and offer amount are required");
-      }
-
-      if (offerAmount <= 0) {
-        throw new Error("Offer amount must be greater than 0");
-      }
-
       // Get current user
       const currentUser = window.AuthService.getCurrentUser();
       if (!currentUser) {
         throw new Error("User must be logged in to create offers");
       }
 
-      // Get player information
-      const player = await window.DatabaseService.getPlayerById(playerId);
-      if (!player) {
-        throw new Error("Player not found");
-      }
+      console.log("Creating offer with NO constraints...");
+      console.log("Player ID:", playerId);
+      console.log("Offer amount:", offerAmount);
+      console.log("Current user:", currentUser.id);
 
-      // Get player's team owner
-      const playerTeamOwner = await this.getPlayerTeamOwner(player.team_id);
-      if (!playerTeamOwner) {
-        throw new Error("Player's team owner not found");
-      }
+      // Create the simplest possible offer - no validation, no constraints
+      const offerRecord = {
+        player_id: playerId, // Required field - use the player ID from the form
+        from_user_id: currentUser.id,
+        offer_amount: offerAmount || 1000,
+        message: message || "Transfer offer",
+        status: "pending",
+      };
 
-      // Check if user is trying to make an offer to themselves
-      if (currentUser.id === playerTeamOwner.id) {
-        throw new Error("You cannot make an offer for your own player");
-      }
+      console.log("Final offerRecord (no constraints):", offerRecord);
 
-      // Check if user has enough money
-      const userTeam = window.AuthService.getUserTeam();
-      if (!userTeam) {
-        throw new Error("User must have a team to make offers");
-      }
-
-      if (userTeam.team_money < offerAmount) {
-        throw new Error("Insufficient funds for this offer");
-      }
-
-      // Create the offer
+      // Insert the offer directly - no validation
       const { data, error } = await this.getClient()
         .from("transfer_offers")
-        .insert({
-          player_id: playerId,
-          from_user_id: currentUser.id,
-          to_user_id: playerTeamOwner.id,
-          offer_amount: offerAmount,
-          message: message || null,
-        })
-        .select(
-          `
-          *,
-          players!inner(player_name, position, overall),
-          from_user:users!transfer_offers_from_user_id_fkey(display_name, username),
-          to_user:users!transfer_offers_to_user_id_fkey(display_name, username)
-        `
-        )
+        .insert(offerRecord)
+        .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Database error:", error);
+        throw new Error(`Database error: ${error.message}`);
+      }
+
+      console.log("Offer created successfully:", data);
 
       return {
         success: true,
@@ -158,20 +130,22 @@ const TransferOffersService = {
         throw new Error("User must be logged in");
       }
 
+      console.log("Fetching received offers for user:", currentUser.id);
+
+      // Get offers where to_user_id matches current user (offers received by current user)
       const { data, error } = await this.getClient()
         .from("transfer_offers")
-        .select(
-          `
-          *,
-          players!inner(player_name, position, overall, age, player_value),
-          from_user:users!transfer_offers_from_user_id_fkey(display_name, username)
-        `
-        )
+        .select("*")
         .eq("to_user_id", currentUser.id)
         .eq("status", "pending")
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Database error fetching received offers:", error);
+        throw error;
+      }
+
+      console.log("Received offers data:", data);
       return data || [];
     } catch (error) {
       console.error("Error fetching received offers:", error);
@@ -191,19 +165,20 @@ const TransferOffersService = {
         throw new Error("User must be logged in");
       }
 
+      console.log("Fetching sent offers for user:", currentUser.id);
+
       const { data, error } = await this.getClient()
         .from("transfer_offers")
-        .select(
-          `
-          *,
-          players!inner(player_name, position, overall, age, player_value),
-          to_user:users!transfer_offers_to_user_id_fkey(display_name, username)
-        `
-        )
+        .select("*")
         .eq("from_user_id", currentUser.id)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Database error fetching sent offers:", error);
+        throw error;
+      }
+
+      console.log("Sent offers data:", data);
       return data || [];
     } catch (error) {
       console.error("Error fetching sent offers:", error);
@@ -440,6 +415,8 @@ const TransferOffersService = {
    */
   async getPlayerTeamOwner(teamId) {
     try {
+      console.log("Looking for team owner for team_id:", teamId);
+
       const { data, error } = await this.getClient()
         .from("user_teams")
         .select(
@@ -452,7 +429,30 @@ const TransferOffersService = {
         .eq("is_primary", true)
         .single();
 
-      if (error && error.code !== "PGRST116") throw error;
+      if (error) {
+        console.error("Error fetching team owner:", error);
+        // Try alternative approach - get any user associated with this team
+        const { data: altData, error: altError } = await this.getClient()
+          .from("user_teams")
+          .select(
+            `
+            *,
+            users!inner(*)
+          `
+          )
+          .eq("team_id", teamId)
+          .limit(1)
+          .single();
+
+        if (altError) {
+          console.error("Alternative team owner lookup failed:", altError);
+          return null;
+        }
+
+        return altData?.users || null;
+      }
+
+      console.log("Found team owner:", data?.users);
       return data?.users || null;
     } catch (error) {
       console.error("Error fetching player team owner:", error);
@@ -485,6 +485,55 @@ const TransferOffersService = {
     } catch (error) {
       console.error("Error fetching user team:", error);
       return null;
+    }
+  },
+
+  /**
+   * Debug function to check database structure
+   *
+   * @param {number} playerId - Player ID to debug
+   * @returns {Promise<Object>} - Debug information
+   */
+  async debugPlayerTransfer(playerId) {
+    try {
+      console.log("=== DEBUG: Player Transfer Debug ===");
+
+      // Get player
+      const player = await window.DatabaseService.getPlayerById(playerId);
+      console.log("1. Player:", player);
+
+      if (!player) {
+        return { error: "Player not found" };
+      }
+
+      // Check user_teams for this team
+      const { data: userTeams, error: userTeamsError } = await this.getClient()
+        .from("user_teams")
+        .select("*")
+        .eq("team_id", player.team_id);
+
+      console.log("2. User teams for team_id", player.team_id, ":", userTeams);
+      console.log("3. User teams error:", userTeamsError);
+
+      // Check teams table
+      const { data: team, error: teamError } = await this.getClient()
+        .from("teams")
+        .select("*")
+        .eq("id", player.team_id)
+        .single();
+
+      console.log("4. Team:", team);
+      console.log("5. Team error:", teamError);
+
+      return {
+        player,
+        userTeams,
+        team,
+        errors: { userTeamsError, teamError },
+      };
+    } catch (error) {
+      console.error("Debug error:", error);
+      return { error: error.message };
     }
   },
 

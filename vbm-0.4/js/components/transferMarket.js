@@ -140,6 +140,9 @@ const TransferMarket = {
       // Attach event listeners
       this.attachTransferEventListeners();
 
+      // Initialize transfer offer form
+      this.initializeTransferOfferForm();
+
       window.DOMHelpers.updateLoadingMessage("Transfer market ready!");
       window.DOMHelpers.updateLoadingProgress(100);
 
@@ -259,6 +262,12 @@ const TransferMarket = {
                 </div>
                 <div class="transfer-player-card__bottom">
                     <div class="transfer-player-card__price">$${transferPrice.toLocaleString()}</div>
+                    <button class="transfer-player-card__offer-btn" 
+                            data-player-id="${player.id}"
+                            data-player-name="${player.player_name}"
+                            data-suggested-price="${transferPrice}">
+                        OFFER
+                    </button>
                 </div>
             </div>
         `;
@@ -273,10 +282,10 @@ const TransferMarket = {
    */
   async generateOffersHTML() {
     try {
-      // Get actual offers from database
-      const transfers = await window.DatabaseService.getTransfers();
-      const pendingOffers = transfers.filter(
-        (transfer) => transfer.status === "pending"
+      // Get actual offers from transfer offers service
+      const offers = await window.TransferOffersService.getReceivedOffers();
+      const pendingOffers = offers.filter(
+        (offer) => offer.status === "pending"
       );
 
       if (pendingOffers.length === 0) {
@@ -301,8 +310,19 @@ const TransferMarket = {
    */
   async generateSentOffersHTML() {
     try {
-      // For now, return empty state - this would be populated with actual sent offers
-      return '<div class="no-offers">No sent offers.</div>';
+      // Get actual sent offers from transfer offers service
+      const offers = await window.TransferOffersService.getSentOffers();
+      const pendingOffers = offers.filter(
+        (offer) => offer.status === "pending"
+      );
+
+      if (pendingOffers.length === 0) {
+        return '<div class="no-offers">No sent offers.</div>';
+      }
+
+      return pendingOffers
+        .map((offer) => this.generateSentOfferCardHTML(offer))
+        .join("");
     } catch (error) {
       console.error("Error generating sent offers HTML:", error);
       return '<div class="error-message">Error loading sent offers.</div>';
@@ -440,22 +460,74 @@ const TransferMarket = {
    * @returns {string} - HTML string for the offer card
    */
   generateOfferCardHTML(offer) {
+    // Simplified data structure - no complex joins
+    const playerName = `Player ID: ${offer.player_id}`;
+    const fromTeamName = `From User: ${offer.from_user_id}`;
+    const offerAmount = offer.offer_amount || 0;
+    const message = offer.message || "";
+
     return `
-            <div class="offer-card" data-offer='${JSON.stringify(offer)}'>
+            <div class="offer-card" data-offer-id="${
+              offer.id
+            }" data-offer='${JSON.stringify(offer)}'>
                 <div class="offer-card__top">
                     <div class="offer-card__info">
-                        <div class="offer-card__player">${offer.player}</div>
-                        <div class="offer-card__team">${offer.team}</div>
+                        <div class="offer-card__player">${playerName}</div>
+                        <div class="offer-card__team">${fromTeamName}</div>
+                        ${
+                          message
+                            ? `<div class="offer-card__message">"${message}"</div>`
+                            : ""
+                        }
                     </div>
-                    <div class="offer-card__amount">$${offer.amount.toLocaleString()}</div>
+                    <div class="offer-card__amount">$${offerAmount.toLocaleString()}</div>
                 </div>
                 <div class="offer-card__actions">
-                    <button class="btn btn--success offer-card__accept" data-player="${
-                      offer.player
-                    }" data-amount="${offer.amount}">Accept</button>
-                    <button class="btn btn--danger offer-card__reject" data-player="${
-                      offer.player
+                    <button class="btn btn--success offer-card__accept" data-offer-id="${
+                      offer.id
+                    }">Accept</button>
+                    <button class="btn btn--danger offer-card__reject" data-offer-id="${
+                      offer.id
                     }">Reject</button>
+                </div>
+            </div>
+        `;
+  },
+
+  /**
+   * Generate HTML for a single sent offer card
+   *
+   * This function creates the HTML for a single sent offer.
+   *
+   * @param {Object} offer - Offer object
+   * @returns {string} - HTML string for the sent offer card
+   */
+  generateSentOfferCardHTML(offer) {
+    // Simplified data structure - no complex joins
+    const playerName = `Player ID: ${offer.player_id}`;
+    const toTeamName = `To User: ${offer.to_user_id || "No recipient"}`;
+    const offerAmount = offer.offer_amount || 0;
+    const message = offer.message || "";
+    const status = offer.status || "pending";
+
+    return `
+            <div class="offer-card offer-card--sent" data-offer-id="${
+              offer.id
+            }">
+                <div class="offer-card__top">
+                    <div class="offer-card__info">
+                        <div class="offer-card__player">${playerName}</div>
+                        <div class="offer-card__team">${toTeamName}</div>
+                        ${
+                          message
+                            ? `<div class="offer-card__message">"${message}"</div>`
+                            : ""
+                        }
+                    </div>
+                    <div class="offer-card__amount">$${offerAmount.toLocaleString()}</div>
+                </div>
+                <div class="offer-card__status">
+                    <span class="offer-status offer-status--${status}">${status.toUpperCase()}</span>
                 </div>
             </div>
         `;
@@ -502,6 +574,15 @@ const TransferMarket = {
       // Transfer player card clicks (for player details)
       document.querySelectorAll(".transfer-player-card").forEach((card) => {
         card.addEventListener("click", (e) => {
+          // Don't show player details if clicking on the offer button or its children
+          if (
+            e.target &&
+            (e.target.classList.contains("transfer-player-card__offer-btn") ||
+              e.target.closest(".transfer-player-card__offer-btn"))
+          ) {
+            return;
+          }
+
           const playerId = card.getAttribute("data-player-id");
           const playerName = card.getAttribute("data-player-name");
           this.showPlayerDetailsById(playerId, playerName);
@@ -531,9 +612,8 @@ const TransferMarket = {
       document.querySelectorAll(".offer-card__accept").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           e.stopPropagation();
-          const playerName = btn.getAttribute("data-player");
-          const amount = btn.getAttribute("data-amount");
-          this.acceptOffer(playerName, amount);
+          const offerId = btn.getAttribute("data-offer-id");
+          this.acceptOffer(offerId);
         });
       });
 
@@ -541,10 +621,32 @@ const TransferMarket = {
       document.querySelectorAll(".offer-card__reject").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           e.stopPropagation();
-          const playerName = btn.getAttribute("data-player");
-          this.rejectOffer(playerName);
+          const offerId = btn.getAttribute("data-offer-id");
+          this.rejectOffer(offerId);
         });
       });
+
+      // Transfer offer buttons
+      document
+        .querySelectorAll(".transfer-player-card__offer-btn")
+        .forEach((btn) => {
+          btn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const playerId = btn.getAttribute("data-player-id");
+            const playerName = btn.getAttribute("data-player-name");
+            const suggestedPrice = parseFloat(
+              btn.getAttribute("data-suggested-price")
+            );
+
+            if (playerId && playerName) {
+              this.makeTransferOffer(playerId, playerName, suggestedPrice);
+            } else {
+              console.error("Missing player data for transfer offer button");
+            }
+          });
+        });
 
       console.log("Transfer market event listeners attached");
     } catch (error) {
@@ -669,6 +771,10 @@ const TransferMarket = {
    */
   showOfferDetails(offer) {
     try {
+      if (!offer) {
+        throw new Error("No offer data provided to showOfferDetails");
+      }
+
       const modalContent = this.generateOfferDetailsHTML(offer);
       window.ModalHelpers.showModal("Transfer Offer Details", modalContent);
     } catch (error) {
@@ -689,105 +795,61 @@ const TransferMarket = {
    * @returns {string} - HTML string for the modal content
    */
   generateOfferDetailsHTML(offer) {
-    const currentContract = offer.currentContract;
-    const offeredContract = offer.offeredContract;
+    // Simplified offer details for basic offer structure
+    const playerId = offer.player_id || "Unknown";
+    const fromUserId = offer.from_user_id || "Unknown";
+    const toUserId = offer.to_user_id || "No recipient";
+    const offerAmount = offer.offer_amount || 0;
+    const message = offer.message || "No message";
+    const status = offer.status || "pending";
+    const createdAt = offer.created_at
+      ? new Date(offer.created_at).toLocaleString()
+      : "Unknown";
 
     return `
       <div class="offer-details">
         <div class="offer-details__header">
-          <h3 class="offer-details__player">${offer.player}</h3>
-          <div class="offer-details__team">${offer.team}</div>
-          <div class="offer-details__transfer-price">Transfer Fee: $${offer.amount.toLocaleString()}</div>
+          <h3 class="offer-details__player">Player ID: ${playerId}</h3>
+          <div class="offer-details__team">From User: ${fromUserId}</div>
+          <div class="offer-details__transfer-price">Transfer Fee: $${offerAmount.toLocaleString()}</div>
         </div>
         
-        <div class="offer-details__contracts">
-          <div class="contract-comparison">
-            <div class="contract-card contract-card--current">
-              <h4 class="contract-card__title">Current Contract</h4>
-              <div class="contract-card__details">
-                <div class="contract-detail">
-                  <span class="contract-detail__label">Position:</span>
-                  <span class="contract-detail__value">${
-                    currentContract.position
-                  }</span>
-                </div>
-                <div class="contract-detail">
-                  <span class="contract-detail__label">Overall Rating:</span>
-                  <span class="contract-detail__value">${
-                    currentContract.overall
-                  }</span>
-                </div>
-                <div class="contract-detail">
-                  <span class="contract-detail__label">Salary:</span>
-                  <span class="contract-detail__value">$${currentContract.salary.toLocaleString()}/year</span>
-                </div>
-                <div class="contract-detail">
-                  <span class="contract-detail__label">Duration:</span>
-                  <span class="contract-detail__value">${
-                    currentContract.duration
-                  } year${currentContract.duration > 1 ? "s" : ""}</span>
-                </div>
+        <div class="offer-details__info">
+          <div class="info-section">
+            <h4 class="info-section__title">Offer Information</h4>
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="info-item__label">Player ID:</span>
+                <span class="info-item__value">${playerId}</span>
               </div>
-            </div>
-            
-            <div class="contract-card contract-card--offered">
-              <h4 class="contract-card__title">Offered Contract</h4>
-              <div class="contract-card__details">
-                <div class="contract-detail">
-                  <span class="contract-detail__label">Position:</span>
-                  <span class="contract-detail__value">${
-                    offeredContract.position
-                  }</span>
-                </div>
-                <div class="contract-detail">
-                  <span class="contract-detail__label">Overall Rating:</span>
-                  <span class="contract-detail__value">${
-                    offeredContract.overall
-                  }</span>
-                </div>
-                <div class="contract-detail">
-                  <span class="contract-detail__label">Salary:</span>
-                  <span class="contract-detail__value">$${offeredContract.salary.toLocaleString()}/year</span>
-                </div>
-                <div class="contract-detail">
-                  <span class="contract-detail__label">Duration:</span>
-                  <span class="contract-detail__value">${
-                    offeredContract.duration
-                  } year${offeredContract.duration > 1 ? "s" : ""}</span>
-                </div>
+              <div class="info-item">
+                <span class="info-item__label">From User:</span>
+                <span class="info-item__value">${fromUserId}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-item__label">To User:</span>
+                <span class="info-item__value">${toUserId}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-item__label">Offer Amount:</span>
+                <span class="info-item__value">$${offerAmount.toLocaleString()}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-item__label">Status:</span>
+                <span class="info-item__value status-${status}">${status.toUpperCase()}</span>
+              </div>
+              <div class="info-item">
+                <span class="info-item__label">Created:</span>
+                <span class="info-item__value">${createdAt}</span>
               </div>
             </div>
           </div>
-        </div>
-        
-        <div class="offer-details__summary">
-          <div class="summary-item">
-            <span class="summary-item__label">Salary Difference:</span>
-            <span class="summary-item__value ${
-              offeredContract.salary > currentContract.salary
-                ? "positive"
-                : "negative"
-            }">
-              ${offeredContract.salary > currentContract.salary ? "+" : ""}$${(
-      offeredContract.salary - currentContract.salary
-    ).toLocaleString()}/year
-            </span>
-          </div>
-          <div class="summary-item">
-            <span class="summary-item__label">Contract Length:</span>
-            <span class="summary-item__value ${
-              offeredContract.duration > currentContract.duration
-                ? "positive"
-                : "negative"
-            }">
-              ${
-                offeredContract.duration > currentContract.duration ? "+" : ""
-              }${offeredContract.duration - currentContract.duration} year${
-      Math.abs(offeredContract.duration - currentContract.duration) > 1
-        ? "s"
-        : ""
-    }
-            </span>
+          
+          <div class="info-section">
+            <h4 class="info-section__title">Message</h4>
+            <div class="message-content">
+              ${message}
+            </div>
           </div>
         </div>
       </div>
@@ -799,35 +861,64 @@ const TransferMarket = {
    *
    * This function handles accepting a received transfer offer.
    *
-   * @param {string} playerName - Name of the player
-   * @param {string} amount - Offer amount
-   * @returns {void}
+   * @param {string} offerId - ID of the offer
+   * @returns {Promise<void>}
    */
-  acceptOffer(playerName, amount) {
+  async acceptOffer(offerId) {
     try {
+      if (!offerId) {
+        throw new Error("Offer ID is required");
+      }
+
       const confirmed = confirm(
-        `Accept offer for ${playerName}?\nAmount: $${Number(
-          amount
-        ).toLocaleString()}\n\nThis player will be transferred to the offering team.`
+        `Accept this transfer offer?\n\nThis will transfer the player and add the money to your team budget.`
       );
 
-      if (confirmed) {
+      if (!confirmed) {
+        return;
+      }
+
+      // Show loading state
+      const acceptButton = document.querySelector(
+        `[data-offer-id="${offerId}"].offer-card__accept`
+      );
+      if (acceptButton) {
+        acceptButton.disabled = true;
+        acceptButton.textContent = "Processing...";
+      }
+
+      // Accept the offer using the transfer offers service
+      const result = await window.TransferOffersService.acceptOffer(offerId);
+
+      if (result.success) {
         window.DOMHelpers.showNotification(
-          `Offer accepted for ${playerName} - $${Number(
-            amount
-          ).toLocaleString()}`,
+          "Transfer offer accepted! Player transferred and money added to your budget.",
           "success"
         );
 
         // Remove the offer from the list
-        this.removeOfferFromList(playerName);
+        this.removeOfferFromList(offerId);
 
-        // In a real app, this would process the transfer
-        console.log("Offer accepted:", { player: playerName, amount });
+        // Refresh the transfer market to show updated data
+        await this.generateTransferMarket();
+      } else {
+        throw new Error(result.error || "Failed to accept offer");
       }
     } catch (error) {
       console.error("Error accepting offer:", error);
-      window.DOMHelpers.showNotification("Error accepting offer", "error");
+      window.DOMHelpers.showNotification(
+        error.message || "Error accepting offer",
+        "error"
+      );
+    } finally {
+      // Reset button state
+      const acceptButton = document.querySelector(
+        `[data-offer-id="${offerId}"].offer-card__accept`
+      );
+      if (acceptButton) {
+        acceptButton.disabled = false;
+        acceptButton.textContent = "Accept";
+      }
     }
   },
 
@@ -836,27 +927,56 @@ const TransferMarket = {
    *
    * This function handles rejecting a received transfer offer.
    *
-   * @param {string} playerName - Name of the player
-   * @returns {void}
+   * @param {string} offerId - ID of the offer
+   * @returns {Promise<void>}
    */
-  rejectOffer(playerName) {
+  async rejectOffer(offerId) {
     try {
-      const confirmed = confirm(`Reject offer for ${playerName}?`);
+      if (!offerId) {
+        throw new Error("Offer ID is required");
+      }
 
-      if (confirmed) {
-        window.DOMHelpers.showNotification(
-          `Offer rejected for ${playerName}`,
-          "info"
-        );
+      const confirmed = confirm(`Reject this transfer offer?`);
+
+      if (!confirmed) {
+        return;
+      }
+
+      // Show loading state
+      const rejectButton = document.querySelector(
+        `[data-offer-id="${offerId}"].offer-card__reject`
+      );
+      if (rejectButton) {
+        rejectButton.disabled = true;
+        rejectButton.textContent = "Processing...";
+      }
+
+      // Reject the offer using the transfer offers service
+      const result = await window.TransferOffersService.rejectOffer(offerId);
+
+      if (result.success) {
+        window.DOMHelpers.showNotification("Transfer offer rejected.", "info");
 
         // Remove the offer from the list
-        this.removeOfferFromList(playerName);
-
-        console.log("Offer rejected:", { player: playerName });
+        this.removeOfferFromList(offerId);
+      } else {
+        throw new Error(result.error || "Failed to reject offer");
       }
     } catch (error) {
       console.error("Error rejecting offer:", error);
-      window.DOMHelpers.showNotification("Error rejecting offer", "error");
+      window.DOMHelpers.showNotification(
+        error.message || "Error rejecting offer",
+        "error"
+      );
+    } finally {
+      // Reset button state
+      const rejectButton = document.querySelector(
+        `[data-offer-id="${offerId}"].offer-card__reject`
+      );
+      if (rejectButton) {
+        rejectButton.disabled = false;
+        rejectButton.textContent = "Reject";
+      }
     }
   },
 
@@ -865,18 +985,15 @@ const TransferMarket = {
    *
    * This function removes a specific offer from the displayed offers list.
    *
-   * @param {string} playerName - Name of the player
+   * @param {string} offerId - ID of the offer
    * @returns {void}
    */
-  removeOfferFromList(playerName) {
+  removeOfferFromList(offerId) {
     try {
-      const offerCards = document.querySelectorAll(".offer-card");
-      offerCards.forEach((card) => {
-        const playerNameElement = card.querySelector(".offer-card__player");
-        if (playerNameElement && playerNameElement.textContent === playerName) {
-          card.remove();
-        }
-      });
+      const offerCard = document.querySelector(`[data-offer-id="${offerId}"]`);
+      if (offerCard) {
+        offerCard.remove();
+      }
     } catch (error) {
       console.error("Error removing offer from list:", error);
     }
@@ -1071,7 +1188,302 @@ const TransferMarket = {
       window.DOMHelpers.showNotification("Error resetting filters", "error");
     }
   },
+
+  /**
+   * Make a transfer offer for a player
+   *
+   * This function opens the transfer offer modal for the specified player.
+   *
+   * @param {string} playerId - The ID of the player
+   * @param {string} playerName - The name of the player
+   * @param {number} suggestedPrice - The suggested transfer price
+   */
+  makeTransferOffer(playerId, playerName, suggestedPrice) {
+    try {
+      // Validate input parameters
+      if (!playerId || !playerName) {
+        throw new Error("Player ID and name are required for transfer offer");
+      }
+
+      if (suggestedPrice && (isNaN(suggestedPrice) || suggestedPrice < 0)) {
+        throw new Error("Invalid suggested price provided");
+      }
+
+      // Debug: Check player transfer data
+      if (
+        window.TransferOffersService &&
+        typeof window.TransferOffersService.debugPlayerTransfer === "function"
+      ) {
+        window.TransferOffersService.debugPlayerTransfer(playerId).then(
+          (debugInfo) => {
+            console.log("Debug info for player", playerId, ":", debugInfo);
+          }
+        );
+      }
+
+      // Use the modal helper to show the transfer offer modal
+      window.ModalHelpers.showTransferOfferModal({
+        playerId: playerId,
+        playerName: playerName,
+        suggestedPrice: suggestedPrice || 0,
+      });
+
+      console.log(`Opening transfer offer for ${playerName} (ID: ${playerId})`);
+    } catch (error) {
+      console.error("Error opening transfer offer modal:", error);
+      window.DOMHelpers.showNotification("Error opening offer form", "error");
+    }
+  },
+
+  /**
+   * Handle transfer offer form submission
+   *
+   * This function processes the transfer offer form submission with validation
+   * and error handling.
+   *
+   * @param {Event} event - Form submission event
+   * @returns {Promise<void>}
+   */
+  async handleTransferOfferSubmission(event) {
+    event.preventDefault();
+
+    let form = null;
+    let submitButton = null;
+
+    try {
+      // Get form data
+      form = event.target;
+      const formData = new FormData(form);
+      const offerAmount = parseFloat(formData.get("offerAmount"));
+      const message = formData.get("message") || "";
+
+      // Validate form data
+      const validationResult = this.validateTransferOfferForm(
+        offerAmount,
+        message
+      );
+      if (!validationResult.isValid) {
+        window.DOMHelpers.showNotification(validationResult.error, "error");
+        return;
+      }
+
+      // Check if we have current transfer offer data
+      if (!window.currentTransferOffer) {
+        throw new Error("No transfer offer data found");
+      }
+
+      // Show loading state
+      submitButton = form.querySelector('button[type="submit"]');
+      if (submitButton) {
+        const originalText = submitButton.textContent;
+        submitButton.disabled = true;
+        submitButton.textContent = "Submitting...";
+      }
+
+      // Create offer data
+      const offerData = {
+        playerId: window.currentTransferOffer.playerId,
+        offerAmount: offerAmount,
+        message: message.trim(),
+      };
+
+      // Submit the offer
+      const result = await window.TransferOffersService.createOffer(offerData);
+
+      if (result.success) {
+        window.DOMHelpers.showNotification(
+          `Transfer offer submitted for ${window.currentTransferOffer.playerName}`,
+          "success"
+        );
+
+        // Close the modal
+        window.ModalHelpers.closeTransferOfferModal();
+
+        // Refresh the transfer market if needed
+        // this.refreshTransferMarket();
+      } else {
+        throw new Error(result.error || "Failed to submit transfer offer");
+      }
+    } catch (error) {
+      console.error("Error submitting transfer offer:", error);
+      window.DOMHelpers.showNotification(
+        error.message || "Error submitting transfer offer",
+        "error"
+      );
+    } finally {
+      // Reset button state
+      if (form && submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent =
+          submitButton.getAttribute("data-original-text") || "Make Offer";
+      }
+    }
+  },
+
+  /**
+   * Validate transfer offer form data
+   *
+   * @param {number} offerAmount - Offer amount
+   * @param {string} message - Optional message
+   * @returns {Object} - Validation result with isValid and error properties
+   */
+  validateTransferOfferForm(offerAmount, message) {
+    // Check if offer amount is valid
+    if (isNaN(offerAmount) || offerAmount <= 0) {
+      return {
+        isValid: false,
+        error: "Please enter a valid offer amount greater than 0",
+      };
+    }
+
+    // Check if offer amount is too high (optional business logic)
+    if (offerAmount > 10000000) {
+      return {
+        isValid: false,
+        error: "Offer amount cannot exceed $10,000,000",
+      };
+    }
+
+    // Check message length if provided
+    if (message && message.length > 500) {
+      return {
+        isValid: false,
+        error: "Message cannot exceed 500 characters",
+      };
+    }
+
+    return { isValid: true };
+  },
+
+  /**
+   * Initialize transfer offer form event listeners
+   *
+   * This function sets up event listeners for the transfer offer form.
+   *
+   * @returns {void}
+   */
+  initializeTransferOfferForm() {
+    try {
+      const form = document.getElementById("transferOfferForm");
+      if (!form) {
+        console.warn("Transfer offer form not found");
+        return;
+      }
+
+      // Remove existing event listeners to prevent duplicates
+      form.removeEventListener(
+        "submit",
+        this.handleTransferOfferSubmission.bind(this)
+      );
+
+      // Add form submission handler
+      form.addEventListener(
+        "submit",
+        this.handleTransferOfferSubmission.bind(this)
+      );
+
+      // Add input validation for real-time feedback
+      const offerAmountInput = document.getElementById("offerAmount");
+      if (offerAmountInput) {
+        offerAmountInput.addEventListener("input", (e) => {
+          const value = parseFloat(e.target.value);
+          if (value && (value < 0 || value > 10000000)) {
+            e.target.setCustomValidity(
+              "Amount must be between $0 and $10,000,000"
+            );
+          } else {
+            e.target.setCustomValidity("");
+          }
+        });
+
+        // Add focus handling for better UX
+        offerAmountInput.addEventListener("focus", () => {
+          if (offerAmountInput.value === "0") {
+            offerAmountInput.select();
+          }
+        });
+      }
+
+      // Add message character counter
+      const messageInput = document.getElementById("offerMessage");
+      if (messageInput) {
+        messageInput.addEventListener("input", (e) => {
+          const length = e.target.value.length;
+          const maxLength = 500;
+
+          // Update character count if there's a counter element
+          const counter = document.getElementById("messageCounter");
+          if (counter) {
+            counter.textContent = `${length}/${maxLength}`;
+            counter.style.color = length > maxLength ? "#e74c3c" : "#666";
+          }
+        });
+      }
+
+      console.log("Transfer offer form event listeners initialized");
+    } catch (error) {
+      console.error("Error initializing transfer offer form:", error);
+    }
+  },
+
+  /**
+   * Check if transfer offer modal is ready
+   *
+   * This function checks if all required elements for the transfer offer modal
+   * are present and ready for use.
+   *
+   * @returns {boolean} - True if modal is ready
+   */
+  isTransferOfferModalReady() {
+    try {
+      const modal = document.getElementById("transferOfferModal");
+      const form = document.getElementById("transferOfferForm");
+      const amountInput = document.getElementById("offerAmount");
+      const messageInput = document.getElementById("offerMessage");
+
+      return !!(modal && form && amountInput && messageInput);
+    } catch (error) {
+      console.error("Error checking transfer offer modal readiness:", error);
+      return false;
+    }
+  },
+
+  /**
+   * Reset transfer offer form to default state
+   *
+   * This function resets the transfer offer form and clears any error states.
+   *
+   * @returns {void}
+   */
+  resetTransferOfferForm() {
+    try {
+      const form = document.getElementById("transferOfferForm");
+      if (form) {
+        form.reset();
+
+        // Clear any custom validity messages
+        const inputs = form.querySelectorAll("input, textarea");
+        inputs.forEach((input) => {
+          input.setCustomValidity("");
+        });
+      }
+
+      // Clear stored transfer offer data
+      if (window.currentTransferOffer) {
+        delete window.currentTransferOffer;
+      }
+
+      console.log("Transfer offer form reset");
+    } catch (error) {
+      console.error("Error resetting transfer offer form:", error);
+    }
+  },
 };
 
 // Export to global scope for use throughout the application
 window.TransferMarket = TransferMarket;
+
+// Make functions globally available
+window.closeTransferOfferModal = () => {
+  window.ModalHelpers.closeTransferOfferModal();
+};

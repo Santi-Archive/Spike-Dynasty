@@ -1436,7 +1436,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.8);
+  background: #000000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1454,8 +1454,8 @@ body {
 
 /* Modal content */
 .modal__content {
-  background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
-  border: 1px solid #444;
+  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+  border: 1px solid #8b5cf6;
   border-radius: 1rem;
   padding: 2rem;
   max-width: 500px;
@@ -1482,22 +1482,26 @@ body {
   align-items: center;
   margin-bottom: 2rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid #444;
+  border-bottom: 1px solid rgba(55, 65, 81, 0.3);
+  background: linear-gradient(135deg, #0a0a0a 0%, #111111 100%);
+  margin: -2rem -2rem 2rem -2rem;
+  padding: 1.5rem 2rem 1rem 2rem;
+  border-radius: 1rem 1rem 0 0;
 }
 
 /* Modal title */
 .modal__title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #fff;
+  color: #f9fafb;
   margin: 0;
 }
 
 /* Modal close button */
 .modal__close {
-  background: none;
-  border: none;
-  color: #888;
+  background: rgba(55, 65, 81, 0.3);
+  border: 1px solid rgba(55, 65, 81, 0.5);
+  color: #9ca3af;
   font-size: 2rem;
   cursor: pointer;
   padding: 0;
@@ -1511,8 +1515,9 @@ body {
 }
 
 .modal__close:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: rgba(55, 65, 81, 0.5);
+  color: #f9fafb;
+  border-color: rgba(55, 65, 81, 0.7);
   transform: scale(1.1);
 }
 
@@ -1800,6 +1805,13 @@ body {
   .modal__content {
     max-width: 95%;
     padding: 1.5rem;
+    background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+  }
+
+  .modal__header {
+    margin: -1.5rem -1.5rem 2rem -1.5rem;
+    padding: 1rem 1.5rem 0.75rem 1.5rem;
+    background: linear-gradient(135deg, #0a0a0a 0%, #111111 100%);
   }
 
   .modal__player-info {
@@ -2432,28 +2444,28 @@ body {
 
 /* Position-specific colors for transfer player cards */
 .transfer-player-card__position[data-position="Outside Hitter"] {
-  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-  color: white;
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e2a5e 100%);
+  color: #93c5fd;
 }
 
 .transfer-player-card__position[data-position="Middle Blocker"] {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  color: white;
+  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+  color: #fca5a5;
 }
 
 .transfer-player-card__position[data-position="Libero"] {
-  background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
-  color: white;
+  background: linear-gradient(135deg, #a16207 0%, #854d0e 100%);
+  color: #fde047;
 }
 
 .transfer-player-card__position[data-position="Opposite Hitter"] {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-  color: white;
+  background: linear-gradient(135deg, #15803d 0%, #14532d 100%);
+  color: #86efac;
 }
 
 .transfer-player-card__position[data-position="Setter"] {
-  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-  color: white;
+  background: linear-gradient(135deg, #c2410c 0%, #9a3412 100%);
+  color: #fdba74;
 }
 
 /* Transfer player overall rating */
@@ -2461,7 +2473,7 @@ body {
   font-size: 1.4rem;
   font-weight: 700;
   color: #6366f1;
-  background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
   border: 2px solid #6366f1;
   border-radius: 0.75rem;
   padding: 0.5rem 0.75rem;
@@ -2488,9 +2500,9 @@ body {
 .transfer-player-card__price {
   font-size: 1.2rem;
   font-weight: 700;
-  color: #22c55e;
-  background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
-  border: 2px solid #22c55e;
+  color: #8b5cf6;
+  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+  border: 2px solid #8b5cf6;
   border-radius: 0.75rem;
   padding: 0.5rem 0.75rem;
   flex: 1;
@@ -2516,6 +2528,37 @@ body {
   justify-content: center;
   font-size: 0.9rem;
   white-space: nowrap;
+}
+
+/* Transfer player offer button */
+.transfer-player-card__offer-btn {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border: none;
+  border-radius: 0.5rem;
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  max-width: 120px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.transfer-player-card__offer-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.transfer-player-card__offer-btn:active {
+  transform: translateY(0);
 }
 
 /* Transfer divider */
@@ -3044,17 +3087,30 @@ body {
 .modal__content--auth {
   max-width: 400px;
   width: 90%;
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #1e40af 100%);
+  border: 2px solid #6366f1;
+  box-shadow: 0 25px 50px -12px rgba(99, 102, 241, 0.25);
+}
+
+/* Ensure auth modal overlay is completely opaque */
+#authModal {
+  background: #000000 !important;
 }
 
 .auth-view {
   text-align: center;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  backdrop-filter: blur(10px);
 }
 
 .auth-view__title {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--color-text-primary);
+  color: #ffffff;
   margin-bottom: 1.5rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .auth-view__description {
@@ -3064,6 +3120,10 @@ body {
 
 .auth-form {
   text-align: left;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .form-group {
@@ -3106,20 +3166,46 @@ body {
 
 .auth-view__switch {
   margin-top: 1.5rem;
-  color: var(--color-text-secondary);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Auth modal specific form styling */
+.modal__content--auth .form-label {
+  color: #ffffff;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.modal__content--auth .form-input {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  backdrop-filter: blur(10px);
+}
+
+.modal__content--auth .form-input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.modal__content--auth .form-input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .link-btn {
   background: none;
   border: none;
-  color: var(--color-primary);
+  color: #a5b4fc;
   text-decoration: underline;
   cursor: pointer;
-  font-size: inherit;
+  transition: color 0.2s ease;
 }
 
 .link-btn:hover {
-  color: var(--color-primary-dark);
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 /* ==========================================================================
@@ -3290,6 +3376,244 @@ body {
 /* Transfer offer modal */
 .transfer-offer-form {
   max-width: 500px;
+}
+
+/* Transfer offer modal specific styling */
+#transferOfferModal .modal__content {
+  background: linear-gradient(135deg, #0f0f0f 0%, #1a1a1a 100%);
+  border: 1px solid #8b5cf6;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+#transferOfferModal .modal__header {
+  background: linear-gradient(135deg, #0a0a0a 0%, #111111 100%);
+  border-bottom: 1px solid rgba(55, 65, 81, 0.3);
+  margin: -1.5rem -1.5rem 1.5rem -1.5rem;
+  padding: 1.5rem;
+  border-radius: 0.75rem 0.75rem 0 0;
+}
+
+#transferOfferModal .modal__title {
+  color: #f9fafb;
+  font-weight: 600;
+}
+
+#transferOfferModal .modal__close {
+  color: #9ca3af;
+  background: rgba(55, 65, 81, 0.3);
+  border: 1px solid rgba(55, 65, 81, 0.5);
+}
+
+#transferOfferModal .modal__close:hover {
+  color: #f9fafb;
+  background: rgba(55, 65, 81, 0.5);
+  border-color: rgba(55, 65, 81, 0.7);
+}
+
+#transferOfferModal .form-group {
+  margin-bottom: 1.5rem;
+}
+
+#transferOfferModal .form-label {
+  color: #e5e7eb;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+#transferOfferModal .form-input {
+  background: rgba(17, 24, 39, 0.6);
+  border: 1px solid #8b5cf6;
+  color: #f9fafb;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+#transferOfferModal .form-input:focus {
+  outline: none;
+  border-color: #a855f7;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+  background: rgba(17, 24, 39, 0.8);
+}
+
+#transferOfferModal .form-input::placeholder {
+  color: #6b7280;
+}
+
+#transferOfferModal .form-input:disabled {
+  background: rgba(17, 24, 39, 0.3);
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+#transferOfferModal .modal__actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(55, 65, 81, 0.3);
+}
+
+#transferOfferModal .btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  border: none;
+  cursor: pointer;
+}
+
+#transferOfferModal .btn--primary {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  color: white;
+}
+
+#transferOfferModal .btn--primary:hover {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+#transferOfferModal .btn--secondary {
+  background: rgba(55, 65, 81, 0.5);
+  color: #e5e7eb;
+  border: 1px solid rgba(55, 65, 81, 0.7);
+}
+
+#transferOfferModal .btn--secondary:hover {
+  background: rgba(55, 65, 81, 0.7);
+  color: #f9fafb;
+  border-color: rgba(55, 65, 81, 0.9);
+}
+
+#transferOfferModal .btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Sent offers styling */
+.offer-card--sent {
+  border-left: 4px solid #8b5cf6;
+}
+
+.offer-card--sent .offer-card__team {
+  color: #a78bfa;
+}
+
+.offer-card__message {
+  font-style: italic;
+  color: #9ca3af;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.offer-card__status {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.offer-status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.offer-status--pending {
+  background: rgba(251, 191, 36, 0.1);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.offer-status--accepted {
+  background: rgba(34, 197, 94, 0.1);
+  color: #22c55e;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.offer-status--rejected {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Additional styling for transfer offer modal elements */
+#transferOfferModal .modal__body {
+  padding: 0 1.5rem 1.5rem 1.5rem;
+}
+
+#transferOfferModal textarea.form-input {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+  line-height: 1.5;
+}
+
+#transferOfferModal .form-input:invalid {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+#transferOfferModal .form-input:valid {
+  border-color: #22c55e;
+}
+
+/* Character counter styling if present */
+#transferOfferModal .message-counter {
+  color: #6b7280;
+  font-size: 0.75rem;
+  text-align: right;
+  margin-top: 0.25rem;
+}
+
+/* Enhanced focus states */
+#transferOfferModal .form-input:focus-visible {
+  outline: 2px solid #8b5cf6;
+  outline-offset: 2px;
+}
+
+/* Loading state for submit button */
+#transferOfferModal .btn--loading {
+  position: relative;
+  color: transparent;
+}
+
+#transferOfferModal .btn--loading::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Modal backdrop enhancement */
+#transferOfferModal.modal--active {
+  backdrop-filter: blur(4px);
+}
+
+#transferOfferModal.modal--active::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: -1;
 }
 
 .modal__actions {

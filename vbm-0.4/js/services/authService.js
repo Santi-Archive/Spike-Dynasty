@@ -216,6 +216,11 @@ const AuthService = {
       this.currentUser = null;
       this.userTeam = null;
 
+      // Refresh the page to reload JavaScript and clear any cached state
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000); // Small delay to show logout message
+
       return {
         success: true,
         message: "Logged out successfully!",

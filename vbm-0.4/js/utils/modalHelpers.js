@@ -736,6 +736,130 @@ function showTransferOfferModal(playerData) {
 }
 
 /**
+ * Show login loading screen with progress updates
+ *
+ * This function displays a loading screen specifically for the login process,
+ * showing progress updates and preparing for page refresh after successful login.
+ *
+ * @param {string} message - Loading message to display
+ * @param {number} progress - Progress percentage (0-100)
+ * @returns {void}
+ */
+function showLoginLoadingScreen(message = "Logging in...", progress = 0) {
+  const loadingScreen = document.getElementById("loadingScreen");
+  const loadingMessage = document.getElementById("loadingMessage");
+  const loadingProgress = document.getElementById("loadingProgress");
+
+  // Track when loading screen was shown
+  window.lastLoadingShowTime = Date.now();
+
+  if (loadingScreen) {
+    loadingScreen.classList.remove("loading-screen--hidden");
+    loadingScreen.style.display = "flex";
+  }
+
+  if (loadingMessage) {
+    loadingMessage.textContent = message;
+  }
+
+  if (loadingProgress) {
+    loadingProgress.style.width = `${Math.max(0, Math.min(100, progress))}%`;
+  }
+
+  // Set up timeout to force hide loading screen
+  if (window.loadingTimeout) {
+    clearTimeout(window.loadingTimeout);
+  }
+
+  window.loadingTimeout = setTimeout(() => {
+    console.warn("Login loading screen timeout reached, force hiding...");
+    forceHideLoadingScreen();
+    window.DOMHelpers.showNotification(
+      "Login timed out. Please try again.",
+      "error"
+    );
+  }, 30000); // 30 second timeout for login
+}
+
+/**
+ * Update login loading screen progress
+ *
+ * @param {string} message - New loading message
+ * @param {number} progress - Progress percentage (0-100)
+ * @returns {void}
+ */
+function updateLoginLoadingProgress(message, progress) {
+  const loadingMessage = document.getElementById("loadingMessage");
+  const loadingProgress = document.getElementById("loadingProgress");
+
+  if (loadingMessage) {
+    loadingMessage.textContent = message;
+  }
+
+  if (loadingProgress) {
+    loadingProgress.style.width = `${Math.max(0, Math.min(100, progress))}%`;
+  }
+}
+
+/**
+ * Hide login loading screen and prepare for page refresh
+ *
+ * @returns {void}
+ */
+function hideLoginLoadingScreen() {
+  const loadingScreen = document.getElementById("loadingScreen");
+
+  if (loadingScreen) {
+    loadingScreen.classList.add("loading-screen--hidden");
+    loadingScreen.style.display = "none";
+  }
+
+  // Clear timeout
+  if (window.loadingTimeout) {
+    clearTimeout(window.loadingTimeout);
+    window.loadingTimeout = null;
+  }
+}
+
+/**
+ * Force hide loading screen (for error cases)
+ *
+ * @returns {void}
+ */
+function forceHideLoadingScreen() {
+  const loadingScreen = document.getElementById("loadingScreen");
+
+  if (loadingScreen) {
+    loadingScreen.classList.add("loading-screen--hidden");
+    loadingScreen.style.display = "none";
+  }
+
+  // Clear timeout
+  if (window.loadingTimeout) {
+    clearTimeout(window.loadingTimeout);
+    window.loadingTimeout = null;
+  }
+}
+
+/**
+ * Show post-login loading screen before page refresh
+ *
+ * This function shows a loading screen after successful login but before
+ * the page refreshes, giving users feedback that the login was successful
+ * and the dashboard is being prepared.
+ *
+ * @returns {void}
+ */
+function showPostLoginLoadingScreen() {
+  showLoginLoadingScreen("Login successful! Preparing dashboard...", 50);
+
+  // Update progress to show completion
+  setTimeout(() => {
+    updateLoginLoadingProgress("Dashboard ready! Refreshing page...", 100);
+  }, 1000);
+}
+
+/**
  * Close all open modals
  *
  * @returns {void}
@@ -757,6 +881,11 @@ window.ModalHelpers = {
   showConfirmationModal,
   showTransferOfferModal,
   closeTransferOfferModal,
+  showLoginLoadingScreen,
+  updateLoginLoadingProgress,
+  hideLoginLoadingScreen,
+  forceHideLoadingScreen,
+  showPostLoginLoadingScreen,
   initializeModalEventListeners,
   isModalOpen,
   closeAllModals,

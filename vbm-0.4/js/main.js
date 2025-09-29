@@ -81,7 +81,19 @@ const VBManager = {
       loadingManager.nextStep("Preparing user interface...");
       if (window.AuthService.isAuthenticated()) {
         console.log("User is already authenticated, loading dashboard");
-        await this.initializePage("dashboard");
+
+        // Check if user has a team assigned
+        const userTeam = window.AuthService.getUserTeam();
+        if (!userTeam) {
+          console.log(
+            "User authenticated but no team assigned, showing team selection"
+          );
+          window.UserManagement.showAuthModal();
+          window.UserManagement.showTeamSelection();
+        } else {
+          console.log("User authenticated with team, loading dashboard");
+          await this.initializePage("dashboard");
+        }
       } else {
         console.log("User not authenticated, showing authentication modal");
         window.UserManagement.showAuthModal();

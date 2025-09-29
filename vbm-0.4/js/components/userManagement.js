@@ -103,27 +103,59 @@ const UserManagement = {
         password: formData.get("password"),
       };
 
-      // Show loading state
+      // Show loading state on form
       this.setFormLoading("loginForm", true);
+
+      // Show login loading screen
+      window.ModalHelpers.showLoginLoadingScreen("Authenticating...", 10);
 
       // Attempt login
       const result = await window.AuthService.login(credentials);
 
       if (result.success) {
-        window.DOMHelpers.showNotification(result.message, "success");
+        // Update loading progress
+        window.ModalHelpers.updateLoginLoadingProgress(
+          "Login successful! Loading user data...",
+          30
+        );
 
         // Check if user has a team assigned
         const userTeam = window.AuthService.getUserTeam();
+
         if (!userTeam) {
+          // User needs to select a team
+          window.ModalHelpers.updateLoginLoadingProgress(
+            "Please select a team...",
+            50
+          );
           this.showTeamSelection();
+          window.ModalHelpers.hideLoginLoadingScreen();
         } else {
-          this.hideAuthModal();
+          // User has a team, show post-login loading and refresh page
+          window.ModalHelpers.showPostLoginLoadingScreen();
+
+          // Show success notification
+          window.DOMHelpers.showNotification(result.message, "success");
+
+          // Wait a moment for user to see the success message, then refresh
+          setTimeout(() => {
+            console.log(
+              "Login successful, refreshing page to load dashboard..."
+            );
+            window.location.reload();
+          }, 2000); // 2 second delay to show the loading screen
         }
       } else {
+        // Login failed, hide loading screen and show error
+        window.ModalHelpers.forceHideLoadingScreen();
         window.DOMHelpers.showNotification(result.error, "error");
       }
     } catch (error) {
       console.error("Login error:", error);
+
+      // Hide loading screen on error
+      window.ModalHelpers.forceHideLoadingScreen();
+
       window.DOMHelpers.showNotification(
         "An error occurred during login",
         "error"
@@ -144,8 +176,12 @@ const UserManagement = {
 
       if (result.success) {
         window.DOMHelpers.showNotification(result.message, "success");
-        // Page will refresh automatically after logout, so no need to show auth modal
-        // The page refresh will reload JavaScript and show the auth modal
+
+        // Update UI to show authentication modal
+        this.updateUI();
+
+        // Navigate to dashboard page (which will show auth modal)
+        window.DOMHelpers.showPage("dashboard");
       } else {
         window.DOMHelpers.showNotification(result.error, "error");
       }
@@ -177,17 +213,37 @@ const UserManagement = {
       // Show loading state
       this.setFormLoading("teamSelectionForm", true);
 
+      // Show loading screen for team selection
+      window.ModalHelpers.showLoginLoadingScreen("Assigning team...", 60);
+
       // Assign team to user
       const result = await window.AuthService.assignTeam(teamId);
 
       if (result.success) {
+        // Show post-login loading and refresh page
+        window.ModalHelpers.showPostLoginLoadingScreen();
+
+        // Show success notification
         window.DOMHelpers.showNotification(result.message, "success");
-        this.hideAuthModal();
+
+        // Wait a moment for user to see the success message, then refresh
+        setTimeout(() => {
+          console.log(
+            "Team assigned successfully, refreshing page to load dashboard..."
+          );
+          window.location.reload();
+        }, 2000); // 2 second delay to show the loading screen
       } else {
+        // Team assignment failed, hide loading screen and show error
+        window.ModalHelpers.forceHideLoadingScreen();
         window.DOMHelpers.showNotification(result.error, "error");
       }
     } catch (error) {
       console.error("Team selection error:", error);
+
+      // Hide loading screen on error
+      window.ModalHelpers.forceHideLoadingScreen();
+
       window.DOMHelpers.showNotification(
         "An error occurred during team selection",
         "error"

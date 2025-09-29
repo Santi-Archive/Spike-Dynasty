@@ -5294,7 +5294,7 @@ body {
   border: 2px dashed #666;
   border-radius: 8px;
   padding: 0;
-  min-height: 140px; /* Increased from 100px to 140px */
+  height: 140px; /* Fixed height instead of min-height */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -5365,7 +5365,7 @@ body {
   gap: 0.5rem;
   width: 100%;
   height: 100%;
-  min-height: 120px;
+  min-height: 140px; /* Match the container height */
   justify-content: center;
   padding: 0.5rem;
   border-radius: 8px;
@@ -5687,7 +5687,7 @@ body {
   border: 2px dashed #666;
   border-radius: 8px;
   padding: 0;
-  min-height: 140px; /* Increased from 100px to 140px */
+  height: 140px; /* Fixed height instead of min-height */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -5729,7 +5729,7 @@ body {
   gap: 0.5rem;
   width: 100%;
   height: 100%;
-  min-height: 120px; /* Match position-slot-player-modern height */
+  min-height: 140px; /* Match the container height */
   justify-content: center;
   padding: 0.5rem;
   border-radius: 8px;
@@ -5939,7 +5939,7 @@ body {
   }
 
   .position-slot-modern {
-    min-height: 100px; /* Increased proportionally from 70px to 100px */
+    height: 100px; /* Fixed height instead of min-height */
     padding: 0.75rem;
   }
 
@@ -6015,7 +6015,7 @@ body {
   }
 
   .position-slot-modern {
-    min-height: 80px; /* Increased proportionally from 60px to 80px */
+    height: 80px; /* Fixed height instead of min-height */
     padding: 0.5rem;
   }
 
